@@ -26,6 +26,9 @@ public class ExpenseService {
 
     public List<ExpenseDto> getRecurring() {
         return expenseRepository.findByRecurring(true).stream()
+            .collect(Collectors.groupingBy(Expense::getType))
+            .values().stream()
+            .map(list -> list.get(0))
             .map(this::toDto)
             .collect(Collectors.toList());
     }
