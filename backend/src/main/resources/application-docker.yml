@@ -1,0 +1,36 @@
+server:
+  port: 8080
+  servlet:
+    session:
+      cookie:
+        name: JSESSIONID
+        same-site: Lax
+
+spring:
+  datasource:
+    url: jdbc:postgresql://db:5432/tedris_crm
+    username: postgres
+    password: postgres
+
+  data:
+    redis:
+      host: redis
+      port: 6379
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+app:
+  cors:
+    allowed-origins: http://localhost:5173,http://localhost
+
+logging:
+  level:
+    com.crm: INFO
+    org.flywaydb: DEBUG

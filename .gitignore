@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Build output
+frontend/dist/
+backend/target/
+
+# IDE
+.idea/
+.vscode/
+*.iws
+*.iml
+*.ipr
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables (SECRETS!)
+.env
+.env.local
+.env.*.local
+
+# Docker volumes
+docker-compose.override.yml
+docker-compose.yml
+
+
+# Logs
+*.log
+npm-debug.log*
+
+# Maven wrapper (if not committed)
+backend/.mvn/wrapper/maven-wrapper.jar
+
+# Java
+*.class
+*.jar
+*.war
+
+# Frontend
+frontend/.vite/
+
+# Redis dump
+dump.rdb
+
+# Database backups
+*.sql.gz
+*.dump
+

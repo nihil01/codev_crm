@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(textutil *)",
+      "Bash(npm create *)",
+      "Bash(npm install *)",
+      "Bash(curl -sL https://raw.githubusercontent.com/apache/maven-wrapper/maven-wrapper-3.2.0/mvnw -o mvnw)",
+      "Bash(chmod +x mvnw)",
+      "Bash(docker run *)",
+      "Bash(docker compose *)",
+      "Bash(curl -v -X POST http://localhost:8080/api/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"admin@tedris.az\",\"password\":\"admin123\"}')",
+      "Bash(curl -s -X POST http://localhost:8080/api/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"admin@tedris.az\",\"password\":\"admin123\"}' -c /tmp/cookies.txt)",
+      "Bash(curl -s -b /tmp/cookies.txt http://localhost:8080/api/dashboard)",
+      "Bash(curl *)"
+    ]
+  }
+}
