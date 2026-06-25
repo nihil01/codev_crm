@@ -25,7 +25,7 @@ public class ExpenseDto {
     @Min(1) @Max(12)
     private Integer expenseMonth;
 
-    private boolean isRecurring;
+    private Boolean recurring;
 
     private String description;
 }

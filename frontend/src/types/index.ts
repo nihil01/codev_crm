@@ -127,7 +127,7 @@ export interface Expense {
   amount: number;
   expenseYear: number;
   expenseMonth: number;
-  isRecurring: boolean;
+  recurring: boolean;
   description?: string;
 }
 

@@ -25,7 +25,7 @@ export const Expenses: React.FC = () => {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
-  const [form, setForm] = useState({ type: ExpenseType.YER, amount: 0, isRecurring: false, description: '' });
+  const [form, setForm] = useState({ type: ExpenseType.YER, amount: 0, recurring: false, description: '' });
   const queryClient = useQueryClient();
 
   const { data: expenses = [], isLoading } = useQuery({ queryKey: ['expenses', year, month], queryFn: () => expensesApi.getByPeriod(year, month) });
@@ -44,8 +44,8 @@ export const Expenses: React.FC = () => {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['expenses'] }); toast.success('Xərc silindi'); },
   });
 
-  const openCreate = () => { setEditing(null); setForm({ type: ExpenseType.YER, amount: 0, isRecurring: false, description: '' }); setShowModal(true); };
-  const openEdit = (e: Expense) => { setEditing(e); setForm({ type: e.type, amount: e.amount, isRecurring: e.isRecurring, description: e.description || '' }); setShowModal(true); };
+  const openCreate = () => { setEditing(null); setForm({ type: ExpenseType.YER, amount: 0, recurring: false, description: '' }); setShowModal(true); };
+  const openEdit = (e: Expense) => { setEditing(e); setForm({ type: e.type, amount: e.amount, recurring: e.recurring, description: e.description || '' }); setShowModal(true); };
   const closeModal = () => { setShowModal(false); setEditing(null); };
   const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); editing?.id ? updateMutation.mutate({ id: editing.id, data: form }) : createMutation.mutate(form); };
   const total = expenses.reduce((sum, e) => sum + e.amount, 0);
@@ -85,7 +85,7 @@ export const Expenses: React.FC = () => {
                   <td className={`py-3 px-4 font-medium transition-colors duration-300 ${t.tdClass}`}>{expenseTypeLabels[exp.type]}</td>
                   <td className="py-3 px-4 text-red-400 font-medium">{exp.amount.toLocaleString()} AZN</td>
                   <td className={`py-3 px-4 transition-colors duration-300 ${t.tdMuted}`}>{exp.description || '—'}</td>
-                  <td className="py-3 px-4">{exp.isRecurring && <Repeat size={14} className="text-slate-400" />}</td>
+                  <td className="py-3 px-4">{exp.recurring && <Repeat size={14} className="text-slate-400" />}</td>
                   <td className="py-3 px-4">
                     <div className="flex items-center justify-end gap-1">
                       <button onClick={() => openEdit(exp)} className={`p-1.5 rounded-lg transition-colors ${t.iconBtn}`}><Edit2 size={15} /></button>
@@ -118,7 +118,7 @@ export const Expenses: React.FC = () => {
                   <div><label className={`block text-sm mb-1 ${t.label}`}>Məbləğ (AZN)</label><input type="number" value={form.amount || ''} onChange={(e) => setForm({ ...form, amount: +e.target.value })} className={inputCls} min={0} step={0.01} required /></div>
                   <div><label className={`block text-sm mb-1 ${t.label}`}>Təsvir</label><input type="text" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={inputCls} /></div>
                   <div className="flex items-center gap-2">
-                    <input type="checkbox" id="recurring" checked={form.isRecurring} onChange={(e) => setForm({ ...form, isRecurring: e.target.checked })} className="w-4 h-4 rounded" />
+                    <input type="checkbox" id="recurring" checked={form.recurring} onChange={(e) => setForm({ ...form, recurring: e.target.checked })} className="w-4 h-4 rounded" />
                     <label htmlFor="recurring" className={`text-sm transition-colors duration-300 ${t.muted}`}>Daimi xərc (hər ay avtomatik)</label>
                   </div>
                   <div className="flex gap-3 pt-2">

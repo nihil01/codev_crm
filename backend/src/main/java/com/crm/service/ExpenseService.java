@@ -38,7 +38,7 @@ public class ExpenseService {
 
     @Transactional
     public ExpenseDto create(ExpenseDto dto) {
-        if (dto.isRecurring()) {
+        if (dto.getRecurring()) {
             // Create for all 12 months of the year
             for (int m = 1; m <= 12; m++) {
                 Expense expense = Expense.builder()
@@ -46,14 +46,14 @@ public class ExpenseService {
                     .amount(dto.getAmount())
                     .expenseYear(dto.getExpenseYear())
                     .expenseMonth(m)
-                    .isRecurring(true)
+                    .recurring(true)
                     .description(dto.getDescription())
                     .build();
                 expenseRepository.save(expense);
             }
             // Return the one for the requested month
             return expenseRepository.findByExpenseYearAndExpenseMonth(dto.getExpenseYear(), dto.getExpenseMonth()).stream()
-                .filter(e -> e.getType() == dto.getType() && e.isRecurring())
+                .filter(e -> e.getType() == dto.getType() && e.getRecurring())
                 .findFirst()
                 .map(this::toDto)
                 .orElseThrow(() -> new RuntimeException("Xərc yaradılmadı"));
@@ -63,7 +63,7 @@ public class ExpenseService {
                 .amount(dto.getAmount())
                 .expenseYear(dto.getExpenseYear())
                 .expenseMonth(dto.getExpenseMonth())
-                .isRecurring(false)
+                .recurring(false)
                 .description(dto.getDescription())
                 .build();
             return toDto(expenseRepository.save(expense));
@@ -75,28 +75,28 @@ public class ExpenseService {
         Expense expense = expenseRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Xərc tapılmadı"));
 
-        boolean wasRecurring = expense.isRecurring();
+        boolean wasRecurring = expense.getRecurring();
 
-        if (wasRecurring && dto.isRecurring()) {
+        if (wasRecurring && dto.getRecurring()) {
             // Update ALL recurring expenses of this type across all months of this year
             for (int m = 1; m <= 12; m++) {
                 List<Expense> monthExpenses = expenseRepository.findByExpenseYearAndExpenseMonth(expense.getExpenseYear(), m);
                 for (Expense related : monthExpenses) {
-                    if (related.isRecurring() && related.getType() == expense.getType()) {
+                    if (related.getRecurring() && related.getType() == expense.getType()) {
                         related.setAmount(dto.getAmount());
                         related.setDescription(dto.getDescription());
                         expenseRepository.save(related);
                     }
                 }
             }
-        } else if (wasRecurring && !dto.isRecurring()) {
+        } else if (wasRecurring && !dto.getRecurring()) {
             // Was recurring, now single: delete all other months, keep this one
             deleteAllRecurringOfType(expense.getType(), expense.getExpenseYear(), expense.getId());
             expense.setRecurring(false);
             expense.setAmount(dto.getAmount());
             expense.setDescription(dto.getDescription());
             expenseRepository.save(expense);
-        } else if (!wasRecurring && dto.isRecurring()) {
+        } else if (dto.getRecurring()) {
             // Was single, now recurring: delete current, create for all months
             expenseRepository.delete(expense);
             for (int m = 1; m <= 12; m++) {
@@ -105,13 +105,13 @@ public class ExpenseService {
                     .amount(dto.getAmount())
                     .expenseYear(dto.getExpenseYear())
                     .expenseMonth(m)
-                    .isRecurring(true)
+                    .recurring(true)
                     .description(dto.getDescription())
                     .build();
                 expenseRepository.save(newExpense);
             }
             return expenseRepository.findByExpenseYearAndExpenseMonth(dto.getExpenseYear(), dto.getExpenseMonth()).stream()
-                .filter(e -> e.getType() == dto.getType() && e.isRecurring())
+                .filter(e -> e.getType() == dto.getType() && e.getRecurring())
                 .findFirst()
                 .map(this::toDto)
                 .orElseThrow(() -> new RuntimeException("Xərc yenilənmədi"));
@@ -134,7 +134,7 @@ public class ExpenseService {
         Expense expense = expenseRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Xərc tapılmadı"));
 
-        if (expense.isRecurring()) {
+        if (expense.getRecurring()) {
             // Delete ALL recurring expenses of this type in this year
             deleteAllRecurringOfType(expense.getType(), expense.getExpenseYear(), null);
         } else {
@@ -146,7 +146,7 @@ public class ExpenseService {
         for (int m = 1; m <= 12; m++) {
             List<Expense> monthExpenses = expenseRepository.findByExpenseYearAndExpenseMonth(year, m);
             for (Expense e : monthExpenses) {
-                if (e.isRecurring() && e.getType() == type && (excludeId == null || !e.getId().equals(excludeId))) {
+                if (e.getRecurring() && e.getType() == type && (!e.getId().equals(excludeId))) {
                     expenseRepository.deleteById(e.getId());
                 }
             }
@@ -159,14 +159,14 @@ public class ExpenseService {
         for (Expense recurringExpense : recurring) {
             // Only create if doesn't already exist for this month
             boolean exists = expenseRepository.findByExpenseYearAndExpenseMonth(year, month).stream()
-                .anyMatch(e -> e.getType() == recurringExpense.getType() && e.isRecurring());
+                .anyMatch(e -> e.getType() == recurringExpense.getType() && e.getRecurring());
             if (!exists) {
                 Expense newExpense = Expense.builder()
                     .type(recurringExpense.getType())
                     .amount(recurringExpense.getAmount())
                     .expenseYear(year)
                     .expenseMonth(month)
-                    .isRecurring(true)
+                    .recurring(true)
                     .description(recurringExpense.getDescription())
                     .build();
                 expenseRepository.save(newExpense);
@@ -180,12 +180,6 @@ public class ExpenseService {
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    public BigDecimal getFixedExpensesTotal() {
-        return expenseRepository.findByIsRecurring(true).stream()
-            .map(Expense::getAmount)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
     private ExpenseDto toDto(Expense e) {
         ExpenseDto dto = new ExpenseDto();
         dto.setId(e.getId());
@@ -193,7 +187,7 @@ public class ExpenseService {
         dto.setAmount(e.getAmount());
         dto.setExpenseYear(e.getExpenseYear());
         dto.setExpenseMonth(e.getExpenseMonth());
-        dto.setRecurring(e.isRecurring());
+        dto.setRecurring(e.getRecurring());
         dto.setDescription(e.getDescription());
         return dto;
     }

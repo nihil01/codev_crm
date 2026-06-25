@@ -32,7 +32,7 @@ public class Expense {
     @Column(nullable = false)
     private Integer expenseMonth;
 
-    private boolean isRecurring; // Daimi xərc
+    private Boolean recurring; // Daimi xərc
 
     private String description;
 
