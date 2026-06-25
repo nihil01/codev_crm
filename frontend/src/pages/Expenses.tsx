@@ -44,7 +44,7 @@ export const Expenses: React.FC = () => {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['expenses'] }); toast.success('Xərc silindi'); },
   });
 
-  const openCreate = () => { setEditing(null); setForm({ type: ExpenseType.YER, amount: 0, recurring: false, description: '' }); setShowModal(true); };
+  const openCreate = () => { setEditing(null); setForm({ type: ExpenseType.YER, amount: 0, recurring: false, description: '', expenseYear: year, expenseMonth: month }); setShowModal(true); };
   const openEdit = (e: Expense) => { setEditing(e); setForm({ type: e.type, amount: e.amount, recurring: e.recurring, description: e.description || '', expenseYear: e.expenseYear, expenseMonth: e.expenseMonth }); setShowModal(true); };
   const closeModal = () => { setShowModal(false); setEditing(null); };
   const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); editing?.id ? updateMutation.mutate({ id: editing.id, data: form }) : createMutation.mutate(form); };
