@@ -25,7 +25,7 @@ export const Expenses: React.FC = () => {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
-  const [form, setForm] = useState({ type: ExpenseType.YER, amount: 0, recurring: false, description: '' });
+  const [form, setForm] = useState({ type: ExpenseType.YER, amount: 0, recurring: false, description: '', expenseYear: now.getFullYear(), expenseMonth: now.getMonth() + 1 });
   const queryClient = useQueryClient();
 
   const { data: expenses = [], isLoading } = useQuery({ queryKey: ['expenses', year, month], queryFn: () => expensesApi.getByPeriod(year, month) });
@@ -36,7 +36,7 @@ export const Expenses: React.FC = () => {
     onError: (err: any) => toast.error(err.response?.data?.message || 'Xəta'),
   });
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: any) => expensesApi.update(id, data),
+    mutationFn: ({ id, data }: any) => expensesApi.update(id, { ...data, expenseYear: form.expenseYear, expenseMonth: form.expenseMonth }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['expenses'] }); toast.success('Xərc yeniləndi'); closeModal(); },
   });
   const deleteMutation = useMutation({
@@ -45,7 +45,7 @@ export const Expenses: React.FC = () => {
   });
 
   const openCreate = () => { setEditing(null); setForm({ type: ExpenseType.YER, amount: 0, recurring: false, description: '' }); setShowModal(true); };
-  const openEdit = (e: Expense) => { setEditing(e); setForm({ type: e.type, amount: e.amount, recurring: e.recurring, description: e.description || '' }); setShowModal(true); };
+  const openEdit = (e: Expense) => { setEditing(e); setForm({ type: e.type, amount: e.amount, recurring: e.recurring, description: e.description || '', expenseYear: e.expenseYear, expenseMonth: e.expenseMonth }); setShowModal(true); };
   const closeModal = () => { setShowModal(false); setEditing(null); };
   const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); editing?.id ? updateMutation.mutate({ id: editing.id, data: form }) : createMutation.mutate(form); };
   const total = expenses.reduce((sum, e) => sum + e.amount, 0);
