@@ -19,9 +19,34 @@ public class ExpenseService {
     private final ExpenseRepository expenseRepository;
 
     public List<ExpenseDto> getByPeriod(Integer year, Integer month) {
-        return expenseRepository.findByExpenseYearAndExpenseMonth(year, month).stream()
+        // Get expenses for this month
+        List<ExpenseDto> monthExpenses = expenseRepository.findByExpenseYearAndExpenseMonth(year, month).stream()
             .map(this::toDto)
             .collect(Collectors.toList());
+
+        // Get all recurring expenses (from any month) and add unique types not already in this month
+        List<ExpenseDto> recurringExpenses = expenseRepository.findByIsRecurring(true).stream()
+            .map(this::toDto)
+            .toList();
+
+        // For each recurring expense, if there's no expense of that type in this month, add it
+        for (ExpenseDto recurring : recurringExpenses) {
+            boolean exists = monthExpenses.stream()
+                .anyMatch(e -> e.getType() == recurring.getType());
+            if (!exists) {
+                // Create a virtual expense for this month based on the recurring one
+                ExpenseDto virtual = new ExpenseDto();
+                virtual.setType(recurring.getType());
+                virtual.setAmount(recurring.getAmount());
+                virtual.setExpenseYear(year);
+                virtual.setExpenseMonth(month);
+                virtual.setRecurring(true);
+                virtual.setDescription(recurring.getDescription());
+                monthExpenses.add(virtual);
+            }
+        }
+
+        return monthExpenses;
     }
 
     public List<ExpenseDto> getRecurring() {
@@ -87,7 +112,9 @@ public class ExpenseService {
     }
 
     public BigDecimal getTotalExpenses(Integer year, Integer month) {
+        // Only non-recurring (variable) expenses for this month
         return expenseRepository.findByExpenseYearAndExpenseMonth(year, month).stream()
+            .filter(e -> !e.isRecurring())
             .map(Expense::getAmount)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }

@@ -21,14 +21,14 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) {
         if (userRepository.count() == 0) {
             userRepository.save(User.builder()
-                .email("admin@tedris.az")
-                .password(passwordEncoder.encode("admin123"))
+                .email("admin@codev.az")
+                .password(passwordEncoder.encode("C0dEv2@26!!"))
                 .fullName("Admin")
                 .role(Role.ADMIN)
                 .active(true)
                 .build());
 
-            log.info("Default admin created: admin@tedris.az / admin123");
+            log.info("Default admin created: admin@codev.az");
         }
     }
 }
