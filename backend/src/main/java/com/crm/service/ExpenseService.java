@@ -179,6 +179,7 @@ public class ExpenseService {
 
     public BigDecimal getTotalExpenses(Integer year, Integer month) {
         return expenseRepository.findByExpenseYearAndExpenseMonth(year, month).stream()
+            .filter(e -> !e.getRecurring())
             .map(Expense::getAmount)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
