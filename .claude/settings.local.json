@@ -11,7 +11,9 @@
       "Bash(curl -v -X POST http://localhost:8080/api/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"admin@tedris.az\",\"password\":\"admin123\"}')",
       "Bash(curl -s -X POST http://localhost:8080/api/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"admin@tedris.az\",\"password\":\"admin123\"}' -c /tmp/cookies.txt)",
       "Bash(curl -s -b /tmp/cookies.txt http://localhost:8080/api/dashboard)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(npx tsc *)",
+      "Bash(docker exec *)"
     ]
   }
 }
