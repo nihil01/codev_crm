@@ -98,7 +98,6 @@ export function Reports() {
               <div className={`p-4 rounded-lg ${t.itemBg}`}><p className={`text-sm ${t.muted}`}>Ümumi Gəlir</p><p className="text-xl font-bold text-emerald-400">{report.totalIncome?.toLocaleString()} AZN</p></div>
               <div className={`p-4 rounded-lg ${t.itemBg}`}><p className={`text-sm ${t.muted}`}>Müəllim Payları</p><p className="text-xl font-bold text-orange-400">{report.totalTeacherSalaries?.toLocaleString()} AZN</p></div>
               <div className={`p-4 rounded-lg ${t.itemBg}`}><p className={`text-sm ${t.muted}`}>Daimi Xərclər</p><p className="text-xl font-bold text-yellow-400">{report.totalFixedExpenses?.toLocaleString()} AZN</p></div>
-              <div className={`p-4 rounded-lg ${t.itemBg}`}><p className={`text-sm ${t.muted}`}>Kommunal Xərclər</p><p className="text-xl font-bold text-blue-400">{report.totalUtilityExpenses?.toLocaleString()} AZN</p></div>
               <div className={`p-4 rounded-lg ${t.itemBg}`}><p className={`text-sm ${t.muted}`}>Ümumi Xərc</p><p className="text-xl font-bold text-red-400">{report.totalExpenses?.toLocaleString()} AZN</p></div>
               <div className={`p-4 rounded-lg border border-indigo-500/30 ${t.itemBg}`}><p className={`text-sm ${t.muted}`}>Xalis Mənfəət</p><p className={`text-xl font-bold ${(report.netProfit || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{report.netProfit?.toLocaleString()} AZN</p></div>
             </div>
