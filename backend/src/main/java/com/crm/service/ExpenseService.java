@@ -25,7 +25,7 @@ public class ExpenseService {
     }
 
     public List<ExpenseDto> getRecurring() {
-        return expenseRepository.findByIsRecurring(true).stream()
+        return expenseRepository.findByRecurring(true).stream()
             .map(this::toDto)
             .collect(Collectors.toList());
     }
@@ -155,7 +155,7 @@ public class ExpenseService {
 
     @Transactional
     public void createRecurringExpenses(Integer year, Integer month) {
-        List<Expense> recurring = expenseRepository.findByIsRecurring(true);
+        List<Expense> recurring = expenseRepository.findByRecurring(true);
         for (Expense recurringExpense : recurring) {
             // Only create if doesn't already exist for this month
             boolean exists = expenseRepository.findByExpenseYearAndExpenseMonth(year, month).stream()

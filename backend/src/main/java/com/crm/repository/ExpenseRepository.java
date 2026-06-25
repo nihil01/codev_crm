@@ -9,5 +9,5 @@ import java.util.List;
 public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     List<Expense> findByExpenseYearAndExpenseMonth(Integer year, Integer month);
     List<Expense> findByType(ExpenseType type);
-    List<Expense> findByIsRecurring(boolean recurring);
+    List<Expense> findByRecurring(boolean recurring);
 }
