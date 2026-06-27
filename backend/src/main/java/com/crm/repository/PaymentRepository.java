@@ -25,14 +25,17 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
                                              @Param("year") Integer year,
                                              @Param("month") Integer month);
 
-    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.paymentYear = :year AND p.paymentMonth = :month AND p.status = 'ODENILIB'")
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.paymentYear = :year AND p.paymentMonth = :month AND p.status = 'ODENILIB' AND p.group.status = 'AKTIV'")
     BigDecimal sumCollectedForMonth(@Param("year") Integer year, @Param("month") Integer month);
 
-    @Query("SELECT p FROM Payment p WHERE p.status = 'GOZLENILIR' AND (p.paymentYear < :year OR (p.paymentYear = :year AND p.paymentMonth < :month))")
+    @Query("SELECT p FROM Payment p WHERE p.status = 'GOZLENILIR' AND p.group.status = 'AKTIV' AND (p.paymentYear < :year OR (p.paymentYear = :year AND p.paymentMonth < :month))")
     List<Payment> findOverduePayments(@Param("year") Integer year, @Param("month") Integer month);
 
-    @Query("SELECT COUNT(p) FROM Payment p WHERE p.status = 'GOZLENILIR' AND (p.paymentYear < :year OR (p.paymentYear = :year AND p.paymentMonth < :month))")
+    @Query("SELECT COUNT(p) FROM Payment p WHERE p.status = 'GOZLENILIR' AND p.group.status = 'AKTIV' AND (p.paymentYear < :year OR (p.paymentYear = :year AND p.paymentMonth < :month))")
     long countOverduePayments(@Param("year") Integer year, @Param("month") Integer month);
+
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.paymentYear = :year AND p.paymentMonth = :month AND p.group.status = 'AKTIV'")
+    BigDecimal sumExpectedForMonth(@Param("year") Integer year, @Param("month") Integer month);
 
     List<Payment> findByStatus(PaymentStatus status);
 }

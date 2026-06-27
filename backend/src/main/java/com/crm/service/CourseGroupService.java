@@ -91,6 +91,17 @@ public class CourseGroupService {
         groupRepository.save(group);
     }
 
+    @Transactional
+    public void resume(Long id) {
+        CourseGroup group = groupRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Qrup tapılmadı"));
+        if (group.getStatus() != GroupStatus.DAYANDIRILMIS) {
+            throw new RuntimeException("Yalnız dayandırılmış qrupları bərpa etmək olar");
+        }
+        group.setStatus(GroupStatus.AKTIV);
+        groupRepository.save(group);
+    }
+
     // === Group Students ===
 
     public List<GroupStudentDto> getGroupStudents(Long groupId) {

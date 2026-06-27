@@ -60,6 +60,13 @@ public class CourseGroupController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping("/{id}/resume")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> resume(@PathVariable Long id) {
+        courseGroupService.resume(id);
+        return ResponseEntity.ok().build();
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {

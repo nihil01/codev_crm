@@ -6,7 +6,7 @@ import { studentsApi } from '../api/students';
 import { teachersApi } from '../api/teachers';
 import { CourseGroup } from '../types';
 import { useThemeClasses } from '../lib/theme';
-import { Plus, Edit2, Trash2, Users, GraduationCap, X, CheckCircle, PauseCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Users, GraduationCap, X, CheckCircle, PauseCircle, PlayCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const statusColors: Record<string, string> = {
@@ -47,6 +47,7 @@ export const Groups: React.FC = () => {
   });
   const completeMutation = useMutation({ mutationFn: groupsApi.complete, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['groups'] }); toast.success('Qrup tamamlandı'); } });
   const suspendMutation = useMutation({ mutationFn: groupsApi.suspend, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['groups'] }); toast.success('Qrup dayandırıldı'); } });
+  const resumeMutation = useMutation({ mutationFn: groupsApi.resume, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['groups'] }); toast.success('Qrup bərpa edildi'); } });
 
   const assignTeacherMutation = useMutation({
     mutationFn: ({ groupId, data }: any) => groupsApi.assignTeacher(groupId, data),
@@ -117,6 +118,9 @@ export const Groups: React.FC = () => {
                     <button onClick={(e) => { e.stopPropagation(); completeMutation.mutate(group.id); }} className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1"><CheckCircle size={14} /> Tamamla</button>
                     <button onClick={(e) => { e.stopPropagation(); suspendMutation.mutate(group.id); }} className="text-xs text-yellow-400 hover:text-yellow-300 flex items-center gap-1"><PauseCircle size={14} /> Dayandır</button>
                   </>
+                )}
+                {group.status === 'DAYANDIRILMIS' && (
+                  <button onClick={(e) => { e.stopPropagation(); resumeMutation.mutate(group.id); }} className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1"><PlayCircle size={14} /> Bərpa Et</button>
                 )}
                 <button onClick={(e) => { e.stopPropagation(); if (confirm('Silmək istəyirsiniz?')) deleteMutation.mutate(group.id); }} className={`p-1 rounded transition-colors ${t.iconBtnDanger}`} title="Sil"><Trash2 size={14} /></button>
               </div>

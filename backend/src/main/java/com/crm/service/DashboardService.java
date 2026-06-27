@@ -53,7 +53,7 @@ public class DashboardService {
 
         dashboard.setOverdueCount(paymentRepository.countOverduePayments(year, month));
 
-        // Recent payments
+        // Recent payments (only from active groups)
         List<PaymentDto> recentPayments = paymentService.getByPeriod(year, month).stream()
             .limit(10)
             .collect(Collectors.toList());
@@ -77,8 +77,6 @@ public class DashboardService {
     }
 
     private BigDecimal calculateExpectedForMonth(Integer year, Integer month) {
-        return paymentRepository.findByPaymentYearAndPaymentMonth(year, month).stream()
-            .map(p -> p.getAmount())
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return paymentRepository.sumExpectedForMonth(year, month);
     }
 }

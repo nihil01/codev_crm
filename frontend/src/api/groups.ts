@@ -28,6 +28,9 @@ export const groupsApi = {
   suspend: async (id: number): Promise<void> => {
     await api.put(`/groups/${id}/suspend`);
   },
+  resume: async (id: number): Promise<void> => {
+    await api.put(`/groups/${id}/resume`);
+  },
   delete: async (id: number): Promise<void> => {
     await api.delete(`/groups/${id}`);
   },
