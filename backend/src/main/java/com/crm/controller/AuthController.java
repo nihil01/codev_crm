@@ -44,6 +44,7 @@ public class AuthController {
             .orElseThrow(() -> new RuntimeException("Istifadeci tapilmadi"));
 
         return ResponseEntity.ok(Map.of(
+            "id", user.getId(),
             "email", user.getEmail(),
             "fullName", user.getFullName(),
             "role", user.getRole().name()
@@ -72,6 +73,7 @@ public class AuthController {
             .orElseThrow(() -> new RuntimeException("Istifadeci tapilmadi"));
 
         return ResponseEntity.ok(Map.of(
+            "id", user.getId(),
             "email", user.getEmail(),
             "fullName", user.getFullName(),
             "role", user.getRole().name()

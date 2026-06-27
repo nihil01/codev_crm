@@ -74,6 +74,7 @@ public class StudentService {
 
         student.setFirstName(dto.getFirstName());
         student.setLastName(dto.getLastName());
+        student.setFin(dto.getFin());
         student.setEmail(dto.getEmail());
         student.setPhone(dto.getPhone());
         student.setBirthDate(dto.getBirthDate());

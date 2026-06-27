@@ -33,10 +33,10 @@ public class DashboardService {
         int year = now.getYear();
         int month = now.getMonthValue();
 
-        dashboard.setTotalStudents((long) studentRepository.count());
-        dashboard.setActiveStudents((long) studentRepository.findByArchived(false).size());
+        dashboard.setTotalStudents(studentRepository.count());
+        dashboard.setActiveStudents(studentRepository.countByArchived(false));
         dashboard.setTotalTeachers((long) teacherRepository.count());
-        dashboard.setActiveGroups((long) groupRepository.findByStatus(GroupStatus.AKTIV).size());
+        dashboard.setActiveGroups(groupRepository.countByStatus(GroupStatus.AKTIV));
 
         BigDecimal collected = paymentService.getCollectedForMonth(year, month);
         dashboard.setCurrentMonthCollected(collected);
@@ -51,7 +51,7 @@ public class DashboardService {
             dashboard.setCollectionRate(BigDecimal.ZERO);
         }
 
-        dashboard.setOverdueCount((long) paymentRepository.findOverduePayments(year, month).size());
+        dashboard.setOverdueCount(paymentRepository.countOverduePayments(year, month));
 
         // Recent payments
         List<PaymentDto> recentPayments = paymentService.getByPeriod(year, month).stream()

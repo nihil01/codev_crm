@@ -8,4 +8,6 @@ import java.util.List;
 
 public interface CourseGroupRepository extends JpaRepository<CourseGroup, Long> {
     List<CourseGroup> findByStatus(GroupStatus status);
+
+    long countByStatus(GroupStatus status);
 }

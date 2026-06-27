@@ -20,4 +20,6 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     List<Student> findByGroupId(Long groupId);
     List<Student> findByArchived(boolean archived);
+
+    long countByArchived(boolean archived);
 }

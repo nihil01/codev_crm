@@ -121,8 +121,11 @@ public class CourseGroupService {
         // Create payment schedule for all months
         createPaymentSchedule(student, group, dto.getMonthlyAmount());
 
-        student.setGroup(group);
-        studentRepository.save(student);
+        // Only set primary group if student doesn't have one yet
+        if (student.getGroup() == null) {
+            student.setGroup(group);
+            studentRepository.save(student);
+        }
 
         return toGroupStudentDto(groupStudentRepository.save(gs));
     }
@@ -133,8 +136,15 @@ public class CourseGroupService {
             .orElseThrow(() -> new RuntimeException("Tələbə bu qrupda deyil"));
 
         Student student = studentRepository.findById(studentId).orElse(null);
-        if (student != null) {
-            student.setGroup(null);
+        if (student != null && student.getGroup() != null && student.getGroup().getId().equals(groupId)) {
+            // Student's primary group was removed — find another group or set null
+            List<GroupStudent> remaining = groupStudentRepository.findByStudentId(studentId);
+            CourseGroup newPrimary = remaining.stream()
+                .map(GroupStudent::getGroup)
+                .filter(g -> !g.getId().equals(groupId))
+                .findFirst()
+                .orElse(null);
+            student.setGroup(newPrimary);
             studentRepository.save(student);
         }
 

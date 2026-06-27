@@ -1,6 +1,7 @@
 import api from './client';
 
 interface UserInfo {
+  id: number;
   email: string;
   fullName: string;
   role: string;

@@ -25,7 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: userData.email,
           fullName: userData.fullName,
           role: userData.role as Role,
-          id: 0,
+          id: userData.id,
         });
       } catch {
         setUser(null);
@@ -42,7 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email: userData.email,
       fullName: userData.fullName,
       role: userData.role as Role,
-      id: 0,
+      id: userData.id,
     });
   };
 

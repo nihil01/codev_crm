@@ -14,14 +14,14 @@ restart:
 
 # Rebuild and start all services
 rebuild:
-	docker-compose up -d --build
+	docker compose up -d --build
 
 # Rebuild specific service
 rebuild-backend:
-	docker-compose up -d --build backend
+	docker compose up -d --build backend
 
 rebuild-frontend:
-	docker-compose up -d --build frontend
+	docker compose up -d --build frontend
 
 # View logs
 logs:

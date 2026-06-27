@@ -10,6 +10,7 @@ import com.crm.repository.CourseGroupRepository;
 import com.crm.repository.PaymentRepository;
 import com.crm.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -78,6 +79,7 @@ public class PaymentService {
         return toDto(paymentRepository.save(payment));
     }
 
+    @Scheduled(cron = "0 0 1 * * ?") // Every day at 1:00 AM
     @Transactional
     public void markOverdue() {
         LocalDate now = LocalDate.now();

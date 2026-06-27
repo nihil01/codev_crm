@@ -54,7 +54,7 @@ spring:
 
 app:
   cors:
-    allowed-origins: https://crm.codev.academy, https://codev.academy
+    allowed-origins: http://localhost:5173,http://localhost:3000,https://crm.codev.academy,https://codev.academy
 
 logging:
   level:
