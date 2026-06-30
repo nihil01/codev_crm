@@ -178,3 +178,27 @@ export interface MonthlyComparison {
   expenses: number;
   profit: number;
 }
+
+export interface ForecastPoint {
+  year: number;
+  month: number;
+  income: number;
+  expenses: number;
+  netProfit: number;
+  isProjected: boolean;
+}
+
+export interface TrendSummary {
+  monthlyProfitTrend: number;
+  projectedAnnualProfit: number;
+  trendDirection: 'GELIŞEN' | 'STABIL' | 'AZALAN';
+  averageMonthlyIncome: number;
+  averageMonthlyExpenses: number;
+  averageMonthlyProfit: number;
+}
+
+export interface ForecastData {
+  history: ForecastPoint[];
+  forecast: ForecastPoint[];
+  trend: TrendSummary;
+}

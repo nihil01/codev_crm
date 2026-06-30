@@ -12,6 +12,7 @@ import {
   Receipt,
   BarChart3,
   Award,
+  TrendingUp,
   LogOut,
   Menu,
   X,
@@ -28,6 +29,7 @@ const navItems = [
   { path: '/payments', label: 'Ödənişlər', icon: CreditCard },
   { path: '/expenses', label: 'Xərclər', icon: Receipt },
   { path: '/reports', label: 'Hesabatlar', icon: BarChart3 },
+  { path: '/forecast', label: 'Proqnoz', icon: TrendingUp },
   { path: '/certificates', label: 'Sertifikatlar', icon: Award },
 ];
 

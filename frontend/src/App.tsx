@@ -14,6 +14,7 @@ import { Payments } from './pages/Payments';
 import { Expenses } from './pages/Expenses';
 import { Reports } from './pages/Reports';
 import { Certificates } from './pages/Certificates';
+import { Forecast } from './pages/Forecast';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,6 +47,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
       <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
       <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+      <Route path="/forecast" element={<ProtectedRoute><Forecast /></ProtectedRoute>} />
       <Route path="/certificates" element={<ProtectedRoute><Certificates /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
