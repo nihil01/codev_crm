@@ -10,4 +10,5 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     List<Expense> findByExpenseYearAndExpenseMonth(Integer year, Integer month);
     List<Expense> findByType(ExpenseType type);
     List<Expense> findByRecurring(boolean recurring);
+    java.util.Optional<Expense> findByRecurringRuleIdAndExpenseYearAndExpenseMonth(Long ruleId, Integer year, Integer month);
 }

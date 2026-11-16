@@ -38,6 +38,10 @@ public class Expense {
     private String description;
     private String adChannel;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recurring_rule_id")
+    private RecurringExpenseRule recurringRule;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 
