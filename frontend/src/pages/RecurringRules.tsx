@@ -40,6 +40,7 @@ export const RecurringRules:React.FC=()=>{
       <h1 className={`text-2xl font-bold ${t.title}`}>Daimi xərc qaydaları</h1>
       <button className="bg-indigo-600 text-white rounded-lg px-4 py-2" onClick={()=>open()}>Yeni qayda</button>
     </div>
+    <p className={t.muted}>Köhnə sistemdən köçürülən daimi xərclər təhlükəsizlik üçün əvvəlcə deaktiv edilir; düzgünlüyünü yoxlayıb aktivləşdirin.</p>
     <p className={t.muted}>Hər qaydanın ayrıca ID-si var. Aylıq xərc avtomatik bir dəfə yaranır;
       qaydanı dəyişmək artıq yaranmış ayların məbləğini dəyişmir. Qaydanı söndürmək keçmiş xərcləri silmir.</p>
     {isLoading?<p>Yüklənir...</p>:<div className="grid gap-3 md:grid-cols-2">
