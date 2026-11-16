@@ -39,6 +39,7 @@ const navItems = [
   { path: '/groups', label: 'Qruplar', icon: Layers },
   { path: '/payments', label: 'Ödənişlər', icon: CreditCard },
   { path: '/expenses', label: 'Xərclər', icon: Receipt },
+  { path: '/expense-rules', label: 'Daimi xərclər', icon: Repeat2 },
   { path: '/reports', label: 'Hesabatlar', icon: BarChart3 },
   { path: '/forecast', label: 'Proqnoz', icon: TrendingUp },
   { path: '/forecast/scenarios', label: 'Ssenarilər', icon: Target },
