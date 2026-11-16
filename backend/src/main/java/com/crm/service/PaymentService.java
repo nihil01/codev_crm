@@ -38,8 +38,6 @@ public class PaymentService {
     public List<PaymentDto> getOverdue(Integer year, Integer month) {
         return getByPeriod(year, month).stream()
             .filter(p -> p.getStatus() == PaymentStatus.GECIKIB)
-            .filter(p -> groups.findById(p.getGroupId())
-                .map(g -> g.getStatus() != com.crm.enums.GroupStatus.DAYANDIRILMIS).orElse(false))
             .toList();
     }
     public BigDecimal getCollectedForMonth(Integer year, Integer month) {
@@ -198,8 +196,9 @@ public class PaymentService {
         CourseGroup group = groups.findById(dto.getGroupId()).orElseThrow(() -> new IllegalArgumentException("Qrup tapılmadı"));
         if (dto.getAmount() == null || dto.getAmount().signum() <= 0 || dto.getAmount().scale() > 2)
             throw new IllegalArgumentException("Aylıq məbləğ düzgün deyil");
-        if (memberships.findByGroupIdAndStudentId(group.getId(),student.getId()).isEmpty())
-            throw new IllegalArgumentException("Tələbə seçilmiş qrupda qeydiyyatda deyil");
+        if (memberships.findByGroupIdAndStudentId(group.getId(),student.getId())
+            .filter(m->m.getLeftAt()==null).isEmpty())
+            throw new IllegalArgumentException("Tələbənin bu qrupda aktiv qeydiyyatı yoxdur");
         YearMonth period = YearMonth.of(dto.getPaymentYear(), dto.getPaymentMonth());
         boolean exists = invoices.findByStudentIdAndGroupId(student.getId(),group.getId()).stream()
             .anyMatch(x -> x.getPaymentYear().equals(period.getYear()) &&
@@ -238,8 +237,10 @@ public class PaymentService {
         dto.setDiscountReason(p.getDiscountReason());
         BigDecimal paid = collectedForInvoice(p.getId());
         dto.setPaidAmount(paid); dto.setRemainingAmount(remaining(p));
-        dto.setStatus(p.isFrozen() ? PaymentStatus.DONDURULUB : dto.getRemainingAmount().signum() == 0
-            ? PaymentStatus.ODENILIB : overdue(p) ? PaymentStatus.GECIKIB : PaymentStatus.GOZLENILIR);
+        dto.setStatus(p.getStatus()==PaymentStatus.BAGISLANIB ? PaymentStatus.BAGISLANIB
+            : p.isFrozen() ? PaymentStatus.DONDURULUB
+            : dto.getRemainingAmount().signum()==0 ? PaymentStatus.ODENILIB
+            : overdue(p) ? PaymentStatus.GECIKIB : PaymentStatus.GOZLENILIR);
         dto.setStudentPhone(p.getStudent().getPhone());
         dto.setStudentFirstName(p.getStudent().getFirstName()); dto.setStudentLastName(p.getStudent().getLastName());
         dto.setGroupNumber(p.getGroup().getGroupNumber());

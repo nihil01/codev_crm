@@ -63,19 +63,20 @@ public class BusinessAnalyticsService {
 
         List<Map<String,Object>> debtors=payments.getAll().stream()
             .filter(p->p.getRemainingAmount()!=null && p.getRemainingAmount().signum()>0 &&
-                !p.isFrozen())
-            .filter(p->groups.findById(p.getGroupId())
-                .map(g->g.getStatus()!=GroupStatus.DAYANDIRILMIS).orElse(false))
+                !p.isFrozen() && p.getStatus()!=com.crm.enums.PaymentStatus.BAGISLANIB)
             .map(p->row("student",p.getStudentFirstName()+" "+p.getStudentLastName(),
                 "group",p.getGroupNumber(),"period",p.getPaymentMonth()+"/"+p.getPaymentYear(),
                 "dueDate",p.getDueDate(),"debt",p.getRemainingAmount(),"status",p.getStatus().name())).toList();
 
         List<Map<String,Object>> groupProfits=new ArrayList<>();
-        for(CourseGroup group:groups.findByStatusIn(List.of(GroupStatus.BASLAYIB,GroupStatus.AKTIV))){
+        // Cash history remains visible after group completion or suspension.
+        for(CourseGroup group:groups.findAll()){
             BigDecimal collected=payments.getCollectedForGroupMonth(group.getId(),year,month);
             BigDecimal teacher=groupService.calculateTeacherSalary(group.getId(),year,month);
-            groupProfits.add(row("group",group.getGroupNumber(),"collected",collected,
-                "teacherShare",teacher,"afterTeacherShare",collected.subtract(teacher)));
+            if(collected.signum()>0 || teacher.signum()>0 ||
+               group.getStatus()==GroupStatus.AKTIV || group.getStatus()==GroupStatus.BASLAYIB)
+                groupProfits.add(row("group",group.getGroupNumber(),"collected",collected,
+                    "teacherShare",teacher,"afterTeacherShare",collected.subtract(teacher)));
         }
 
         List<Map<String,Object>> teacherShares=new ArrayList<>();
