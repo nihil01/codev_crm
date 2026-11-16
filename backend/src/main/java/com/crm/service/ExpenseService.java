@@ -27,6 +27,7 @@ public class ExpenseService {
     private final ExpenseRepository expenses;
     private final RecurringExpenseRuleRepository rules;
     private final JdbcTemplate jdbc;
+    private final ChangeAuditService audit;
 
     @Transactional(readOnly = true)
     public List<ExpenseDto> getByPeriod(Integer year, Integer month) {
@@ -61,13 +62,16 @@ public class ExpenseService {
             .active(dto.isActive()).build();
         rule = rules.saveAndFlush(rule);
         if (rule.isActive()) createOne(rule, start);
-        return toRuleDto(rule);
+        RecurringExpenseRuleDto created=toRuleDto(rule);
+        audit.record("CREATE","RECURRING_EXPENSE_RULE",rule.getId(),null,created);
+        return created;
     }
 
     @Transactional
     public RecurringExpenseRuleDto editRule(Long id, RecurringExpenseRuleDto dto) {
         RecurringExpenseRule rule = rules.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Daimi xərc qaydası tapılmadı"));
+        RecurringExpenseRuleDto before=toRuleDto(rule);
         validate(dto.getType(), dto.getAmount(), dto.getAdChannel());
         if (!rule.getStartYear().equals(dto.getStartYear())
                 || !rule.getStartMonth().equals(dto.getStartMonth()))
@@ -80,20 +84,25 @@ public class ExpenseService {
         rule = rules.save(rule);
         // Existing months are immutable from rule edits; month-specific edits use /expenses/{id}.
         if (rule.isActive()) createOne(rule, YearMonth.of(rule.getStartYear(), rule.getStartMonth()));
-        return toRuleDto(rule);
+        RecurringExpenseRuleDto updated=toRuleDto(rule);
+        audit.record("UPDATE","RECURRING_EXPENSE_RULE",id,before,updated);
+        return updated;
     }
 
     @Transactional
     public RecurringExpenseRuleDto setRuleActive(Long id, boolean active) {
         RecurringExpenseRule rule = rules.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Daimi xərc qaydası tapılmadı"));
+        RecurringExpenseRuleDto before=toRuleDto(rule);
         rule.setActive(active);
         rule = rules.save(rule);
         if (active) {
             LocalDate today = LocalDate.now(ZoneId.of("Asia/Baku"));
             createOne(rule, YearMonth.from(today));
         }
-        return toRuleDto(rule);
+        RecurringExpenseRuleDto updated=toRuleDto(rule);
+        audit.record(active?"ACTIVATE":"DEACTIVATE","RECURRING_EXPENSE_RULE",id,before,updated);
+        return updated;
     }
 
     @Transactional
@@ -109,21 +118,26 @@ public class ExpenseService {
             rule = rules.saveAndFlush(rule);
             createOne(rule, month);
             Long ruleId = rule.getId();
-            return expenses.findByRecurringRuleIdAndExpenseYearAndExpenseMonth(
+            ExpenseDto created=expenses.findByRecurringRuleIdAndExpenseYearAndExpenseMonth(
                 ruleId, month.getYear(), month.getMonthValue()).map(this::toDto)
                 .orElseThrow(() -> new IllegalStateException("Daimi xərc yaradıla bilmədi"));
+            audit.record("CREATE","RECURRING_EXPENSE_RULE",ruleId,null,toRuleDto(rule));
+            return created;
         }
-        return toDto(expenses.save(Expense.builder()
+        ExpenseDto created=toDto(expenses.save(Expense.builder()
             .type(dto.getType()).amount(dto.getAmount()).description(dto.getDescription())
             .adChannel(normalize(dto.getAdChannel()))
             .expenseYear(month.getYear()).expenseMonth(month.getMonthValue())
             .recurring(false).cancelled(false).build()));
+        audit.record("CREATE","EXPENSE",created.getId(),null,created);
+        return created;
     }
 
     @Transactional
     public ExpenseDto update(Long id, ExpenseDto dto) {
         Expense expense = expenses.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Xərc tapılmadı"));
+        ExpenseDto before=toDto(expense);
         validate(dto.getType(), dto.getAmount(), dto.getAdChannel());
         if (expense.getRecurringRule() != null) {
             // Treat one month as an independent accounting override.
@@ -151,19 +165,24 @@ public class ExpenseService {
         expense.setAmount(dto.getAmount());
         expense.setDescription(dto.getDescription());
         expense.setAdChannel(normalize(dto.getAdChannel()));
-        return toDto(expenses.save(expense));
+        ExpenseDto updated=toDto(expenses.save(expense));
+        audit.record("UPDATE","EXPENSE",id,before,updated);
+        return updated;
     }
 
     @Transactional
     public void delete(Long id) {
         Expense expense = expenses.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Xərc tapılmadı"));
+        ExpenseDto before=toDto(expense);
         if (expense.getRecurringRule() == null) {
             expenses.delete(expense);
+            audit.record("DELETE","EXPENSE",id,before,null);
         } else {
             // Soft-cancel only this month; unique key prevents scheduler recreation.
             expense.setCancelled(true);
-            expenses.save(expense);
+            ExpenseDto updated=toDto(expenses.save(expense));
+            audit.record("CANCEL_MONTH","EXPENSE",id,before,updated);
         }
     }
 
@@ -173,16 +192,21 @@ public class ExpenseService {
             .orElseThrow(() -> new IllegalArgumentException("Xərc tapılmadı"));
         if (expense.getRecurringRule() == null || !expense.isCancelled())
             throw new IllegalArgumentException("Bərpa ediləcək daimi aylıq xərc yoxdur");
+        ExpenseDto before=toDto(expense);
         expense.setCancelled(false);
-        return toDto(expenses.save(expense));
+        ExpenseDto updated=toDto(expenses.save(expense));
+        audit.record("RESTORE_MONTH","EXPENSE",id,before,updated);
+        return updated;
     }
 
     @EventListener(ApplicationReadyEvent.class)
+    @Transactional
     public void generateOnStart() {
         generateCurrentMonth();
     }
 
     @Scheduled(cron = "0 10 0 * * *", zone = "Asia/Baku")
+    @Transactional
     public void generateCurrentMonth() {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Baku"));
         createRecurringExpenses(today.getYear(), today.getMonthValue());
@@ -198,7 +222,7 @@ public class ExpenseService {
         if (!rule.isActive() || target.isBefore(YearMonth.of(rule.getStartYear(), rule.getStartMonth())))
             return;
         // Concurrent schedulers are safe because a unique partial index exists on (rule, year, month).
-        jdbc.update("""
+        int created = jdbc.update("""
             INSERT INTO expenses(type,amount,expense_year,expense_month,is_recurring,description,
                                  ad_channel,recurring_rule_id,cancelled,created_at,updated_at)
             VALUES (?,?,?,?,TRUE,?,?,?,FALSE,now(),now())
@@ -206,6 +230,12 @@ public class ExpenseService {
               WHERE recurring_rule_id IS NOT NULL DO NOTHING
             """, rule.getType().name(), rule.getAmount(), target.getYear(),
               target.getMonthValue(), rule.getDescription(), rule.getAdChannel(), rule.getId());
+        if (created > 0) {
+            Expense generated = expenses.findByRecurringRuleIdAndExpenseYearAndExpenseMonth(
+                rule.getId(),target.getYear(),target.getMonthValue())
+                .orElseThrow(() -> new IllegalStateException("Yaradılan xərc tapılmadı"));
+            audit.record("GENERATE_MONTH","EXPENSE",generated.getId(),null,toDto(generated));
+        }
     }
 
     @Transactional(readOnly = true)
