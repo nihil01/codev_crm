@@ -80,7 +80,9 @@ public class PaymentService {
             throw new IllegalArgumentException("Ödəniş məbləği düzgün deyil");
         if (method == null) throw new IllegalArgumentException("Ödəniş üsulu tələb olunur");
         PaymentDto before = toDto(p);
-        if (p.isFrozen() || p.getStatus() == PaymentStatus.BAGISLANIB)
+        if (p.isFrozen() || p.getStatus() == PaymentStatus.BAGISLANIB ||
+            freezePeriods.existsByStudentIdAndYearAndMonth(
+                p.getStudent().getId(),p.getPaymentYear(),p.getPaymentMonth()))
             throw new IllegalArgumentException("Dondurulmuş/bağışlanmış ödənişi qəbul etmək olmaz");
         BigDecimal rest = remaining(p);
         if (amount.compareTo(rest) > 0) throw new IllegalArgumentException("Ödəniş qalıq borcdan çoxdur");
@@ -139,6 +141,9 @@ public class PaymentService {
     public PaymentDto freeze(Long id, boolean freeze) {
         Payment p = invoices.lockById(id).orElseThrow(() -> new IllegalArgumentException("Ödəniş tapılmadı"));
         PaymentDto before = toDto(p);
+        if (!freeze && freezePeriods.existsByStudentIdAndYearAndMonth(
+            p.getStudent().getId(),p.getPaymentYear(),p.getPaymentMonth()))
+            throw new IllegalArgumentException("Tələbənin ayı dondurulub; əvvəl ayın dondurmasını ləğv edin");
         if (freeze && collectedForInvoice(id).signum() > 0)
             throw new IllegalArgumentException("Ödənilmiş ayı dondurmaq olmaz");
         p.setFrozen(freeze);

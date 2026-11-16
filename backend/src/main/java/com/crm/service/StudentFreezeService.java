@@ -18,6 +18,7 @@ public class StudentFreezeService {
     private final StudentRepository students;
     private final PaymentRepository invoices;
     private final PaymentService payments;
+    private final ChangeAuditService audit;
     public record FreezeDto(Long id,Integer year,Integer month,String createdBy) {}
 
     @Transactional(readOnly=true)
@@ -41,15 +42,26 @@ public class StudentFreezeService {
             .student(student).year(year).month(month)
             .createdBy(SecurityContextHolder.getContext().getAuthentication().getName()).build());
         for(Payment p:matches)payments.freeze(p.getId(),true);
-        return new FreezeDto(period.getId(),year,month,period.getCreatedBy());
+        FreezeDto created=new FreezeDto(period.getId(),year,month,period.getCreatedBy());
+        audit.record("CREATE","STUDENT_FREEZE",period.getId(),null,
+            java.util.Map.of("studentId",studentId,"year",year,"month",month,"createdBy",period.getCreatedBy()));
+        return created;
     }
     @Transactional
     public void unfreeze(Long studentId,int year,int month) {
         StudentFreezePeriod period=periods.findByStudentIdAndYearAndMonth(studentId,year,month)
             .orElseThrow(()->new IllegalArgumentException("Dondurulmuş ay tapılmadı"));
-        periods.delete(period);
+        Student student=students.findById(studentId)
+            .orElseThrow(()->new IllegalArgumentException("Tələbə tapılmadı"));
+        java.time.YearMonth current=java.time.YearMonth.now(java.time.ZoneId.of("Asia/Baku"));
+        if(student.getStatus()==com.crm.enums.StudentStatus.DONDURULUB &&
+            current.getYear()==year && current.getMonthValue()==month)
+            throw new IllegalArgumentException("Cari ayı açmaq üçün əvvəl tələbənin statusunu Aktiv edin");
+        periods.deleteAndFlush(period);
         for(Payment p:invoices.findByStudentId(studentId))
             if(p.getPaymentYear()==year && p.getPaymentMonth()==month)
                 payments.freeze(p.getId(),false);
+        audit.record("DELETE","STUDENT_FREEZE",period.getId(),
+            java.util.Map.of("studentId",studentId,"year",year,"month",month,"createdBy",period.getCreatedBy()),null);
     }
 }
