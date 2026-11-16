@@ -46,36 +46,61 @@ export const Groups: React.FC = () => {
 
   const createMutation = useMutation({
     mutationFn: groupsApi.create,
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['groups'] }); toast.success('Qrup yaradıldı'); closeModal(); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['groups'] }); queryClient.invalidateQueries({ queryKey: ['dashboard'] }); toast.success('Qrup yaradıldı'); closeModal(); },
     onError: (err: any) => toast.error(err.response?.data?.message || 'Xəta'),
   });
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<CourseGroup> }) => groupsApi.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['groups'] }); toast.success('Qrup yeniləndi'); closeModal(); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['groups'] }); queryClient.invalidateQueries({ queryKey: ['dashboard'] }); toast.success('Qrup yeniləndi'); closeModal(); },
     onError: (err: any) => toast.error(err.response?.data?.message || 'Xəta'),
   });
   const deleteMutation = useMutation({
     mutationFn: groupsApi.delete,
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['groups'] }); toast.success('Qrup silindi'); setSelectedGroup(null); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['groups'] }); queryClient.invalidateQueries({ queryKey: ['dashboard'] }); toast.success('Qrup silindi'); setSelectedGroup(null); },
     onError: (error: any) => toast.error(error?.response?.data?.message || 'Qrup silinmədi'),
   });
-  const completeMutation = useMutation({ mutationFn: groupsApi.complete, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['groups'] }); toast.success('Qrup tamamlandı'); } });
-  const suspendMutation = useMutation({ mutationFn: groupsApi.suspend, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['groups'] }); toast.success('Qrup dayandırıldı'); } });
-  const resumeMutation = useMutation({ mutationFn: groupsApi.resume, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['groups'] }); toast.success('Qrup bərpa edildi'); } });
+  const completeMutation = useMutation({
+    mutationFn: groupsApi.complete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      toast.success('Qrup tamamlandı');
+    },
+    onError: (error: any) => toast.error(error?.response?.data?.message || 'Qrup tamamlanmadı'),
+  });
+  const suspendMutation = useMutation({
+    mutationFn: groupsApi.suspend,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      toast.success('Qrup dayandırıldı');
+    },
+    onError: (error: any) => toast.error(error?.response?.data?.message || 'Qrup dayandırılmadı'),
+  });
+  const resumeMutation = useMutation({
+    mutationFn: groupsApi.resume,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      toast.success('Qrup bərpa edildi');
+    },
+    onError: (error: any) => toast.error(error?.response?.data?.message || 'Qrup bərpa edilmədi'),
+  });
 
   const assignTeacherMutation = useMutation({
     mutationFn: ({ groupId, data }: any) => groupsApi.assignTeacher(groupId, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['group-teachers'] }); toast.success('Müəllim təyin edildi'); setTeacherForm({ teacherId: 0, salaryPercentage: 30, effectiveMonth: new Date().getMonth() + 1, effectiveYear: new Date().getFullYear() }); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['group-teachers'] }); queryClient.invalidateQueries({ queryKey: ['groups'] }); toast.success('Müəllim təyin edildi'); setTeacherForm({ teacherId: 0, salaryPercentage: 30, effectiveMonth: new Date().getMonth() + 1, effectiveYear: new Date().getFullYear() }); },
     onError: (err: any) => toast.error(err.response?.data?.message || 'Xəta'),
   });
   const removeTeacherMutation = useMutation({
     mutationFn: ({ groupId, teacherId }: { groupId: number; teacherId: number }) => groupsApi.removeTeacher(groupId, teacherId),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['group-teachers'] }); toast.success('Müəllim çıxarıldı'); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['group-teachers'] }); queryClient.invalidateQueries({ queryKey: ['groups'] }); toast.success('Müəllim çıxarıldı'); },
+    onError: (error: any) => toast.error(error?.response?.data?.message || 'Müəllim çıxarılmadı'),
   });
 
   const addStudentMutation = useMutation({
     mutationFn: ({ groupId, data }: any) => groupsApi.addStudent(groupId, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['group-students'] }); toast.success('Tələbə əlavə edildi'); setShowAddStudent(false); setAddStudentForm({ studentId: 0, monthlyAmount: 0, joinDate: '' }); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['group-students'] }); queryClient.invalidateQueries({ queryKey: ['groups'] }); queryClient.invalidateQueries({ queryKey: ['dashboard'] }); toast.success('Tələbə əlavə edildi'); setShowAddStudent(false); setAddStudentForm({ studentId: 0, monthlyAmount: 0, joinDate: '' }); },
     onError: (err: any) => toast.error(err.response?.data?.message || 'Xəta'),
   });
   const errorMessage = (error: any) =>
