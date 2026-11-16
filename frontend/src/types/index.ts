@@ -124,6 +124,8 @@ export interface CourseGroup {
   trainingMode?: 'EYANI'|'ONLAYN';
   room?: string;
   maxStudents?: number;
+  activeStudentCount?: number;
+  teacherNames?: string[];
 }
 
 export interface GroupStudent {
@@ -204,6 +206,10 @@ export interface DashboardData {
   currentMonthOutstanding: number;
   /** Unpaid overdue debt across all invoice months. */
   totalOverdueDebt: number;
+  /** Actual teacher accruals for the selected calendar month. */
+  currentMonthTeacherShare: number;
+  /** Cash collected minus teacher shares (not company-wide net profit). */
+  currentMonthAfterTeacherShare: number;
   collectionRate: number;
   overdueCount: number;
   recentPayments: Payment[];

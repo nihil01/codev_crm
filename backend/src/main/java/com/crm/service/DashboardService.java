@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import com.crm.entity.GroupStudent;
@@ -29,10 +31,11 @@ public class DashboardService {
     private final PaymentService paymentService;
     private final BillingMetricsService billingMetrics;
 
+    @Transactional(readOnly = true)
     public DashboardDto getDashboard() {
         DashboardDto dashboard = new DashboardDto();
 
-        LocalDate now = LocalDate.now();
+        LocalDate now = LocalDate.now(ZoneId.of("Asia/Baku"));
         int year = now.getYear();
         int month = now.getMonthValue();
 
@@ -41,20 +44,12 @@ public class DashboardService {
         dashboard.setTotalTeachers((long) teacherRepository.count());
         dashboard.setActiveGroups(groupRepository.countByStatusIn(List.of(GroupStatus.AKTIV,GroupStatus.BASLAYIB)));
 
-        BigDecimal collected = paymentService.getCollectedForMonth(year, month);
-        dashboard.setCurrentMonthCollected(collected);
-
-        BillingMetricsService.InvoiceTotals billed=billingMetrics.forPeriod(year,month);
-        dashboard.setCurrentMonthExpected(billed.expected());
-        dashboard.setCurrentMonthPaidAgainstExpected(billed.paidAgainstInvoices());
-        dashboard.setCurrentMonthOutstanding(billed.remaining());
-        dashboard.setCollectionRate(billed.collectionRate());
         var overdue=billingMetrics.allOverdue();
-        dashboard.setOverdueCount((long)overdue.size());
+        dashboard.setOverdueCount((long) overdue.size());
         dashboard.setTotalOverdueDebt(overdue.stream().map(PaymentDto::getRemainingAmount)
-            .reduce(BigDecimal.ZERO,BigDecimal::add));
+            .reduce(BigDecimal.ZERO, BigDecimal::add));
 
-        // Recent payments (only from active groups)
+        // Invoices issued in the selected month (not cash receipt transactions)
         List<PaymentDto> recentPayments = paymentService.getByPeriod(year, month).stream()
             .limit(10)
             .collect(Collectors.toList());
@@ -62,7 +57,8 @@ public class DashboardService {
 
         // Group summaries
         List<DashboardDto.GroupSummaryDto> summaries = new ArrayList<>();
-        for (CourseGroup group : groupRepository.findByStatusIn(List.of(GroupStatus.AKTIV,GroupStatus.BASLAYIB))) {
+        // Preserve historic income and invoices for completed/suspended groups.
+        for (CourseGroup group : groupRepository.findAll()) {
             DashboardDto.GroupSummaryDto gs = new DashboardDto.GroupSummaryDto();
             gs.setGroupId(group.getId());
             gs.setGroupNumber(group.getGroupNumber());
@@ -81,6 +77,27 @@ public class DashboardService {
             summaries.add(gs);
         }
         dashboard.setGroupSummaries(summaries);
+
+        // Summary figures must match the exact columns shown in the group table.
+        BigDecimal expected=BigDecimal.ZERO, paidAgainst=BigDecimal.ZERO;
+        BigDecimal remaining=BigDecimal.ZERO, cash=BigDecimal.ZERO;
+        BigDecimal teacherShare=BigDecimal.ZERO, afterTeacher=BigDecimal.ZERO;
+        for (DashboardDto.GroupSummaryDto row : summaries) {
+            expected=expected.add(row.getExpected());
+            paidAgainst=paidAgainst.add(row.getPaidAgainstInvoices());
+            remaining=remaining.add(row.getOutstanding());
+            cash=cash.add(row.getCollected());
+            teacherShare=teacherShare.add(row.getTeacherShare());
+            afterTeacher=afterTeacher.add(row.getNetProfit());
+        }
+        dashboard.setCurrentMonthExpected(expected);
+        dashboard.setCurrentMonthPaidAgainstExpected(paidAgainst);
+        dashboard.setCurrentMonthOutstanding(remaining);
+        dashboard.setCurrentMonthCollected(cash);
+        dashboard.setCurrentMonthTeacherShare(teacherShare);
+        dashboard.setCurrentMonthAfterTeacherShare(afterTeacher);
+        dashboard.setCollectionRate(expected.signum()==0 ? BigDecimal.ZERO
+            : paidAgainst.multiply(BigDecimal.valueOf(100)).divide(expected,2,RoundingMode.HALF_UP));
 
         return dashboard;
     }

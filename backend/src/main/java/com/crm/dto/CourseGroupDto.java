@@ -6,6 +6,7 @@ import jakarta.validation.constraints.*;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 public class CourseGroupDto {
@@ -32,4 +33,6 @@ public class CourseGroupDto {
     private String room;
     @Min(1)
     private Integer maxStudents;
+    private Long activeStudentCount;
+    private List<String> teacherNames;
 }

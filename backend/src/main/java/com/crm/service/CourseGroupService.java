@@ -402,6 +402,13 @@ public class CourseGroupService {
         dto.setTrainingMode(g.getTrainingMode());
         dto.setRoom(g.getRoom());
         dto.setMaxStudents(g.getMaxStudents());
+        dto.setActiveStudentCount(g.getGroupStudents().stream()
+            .filter(m -> m.getLeftAt() == null && !m.getStudent().isArchived()
+                && m.getStudent().getStatus() == com.crm.enums.StudentStatus.AKTIV)
+            .map(m -> m.getStudent().getId()).distinct().count());
+        dto.setTeacherNames(g.getGroupTeachers().stream()
+            .map(gt -> gt.getTeacher().getFirstName() + " " + gt.getTeacher().getLastName())
+            .distinct().toList());
         return dto;
     }
 
