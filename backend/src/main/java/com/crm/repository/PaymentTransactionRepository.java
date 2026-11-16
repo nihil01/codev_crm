@@ -13,6 +13,9 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
     java.util.Optional<PaymentTransaction> findByPaymentIdAndIdempotencyKey(Long paymentId, String idempotencyKey);
 
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM PaymentTransaction t WHERE t.payment.id = :paymentId")
+    @Query("SELECT COUNT(t)>0 FROM PaymentTransaction t WHERE t.payment.group.id=:groupId AND t.paidAt>=:fromDate")
+    boolean anyCollectedFrom(@Param("groupId") Long groupId,@Param("fromDate") LocalDateTime fromDate);
+
     BigDecimal sumForInvoice(@Param("paymentId") Long paymentId);
 
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM PaymentTransaction t " +
