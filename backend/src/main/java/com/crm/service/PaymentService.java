@@ -22,6 +22,8 @@ public class PaymentService {
     private final StudentRepository students;
     private final CourseGroupRepository groups;
     private final StudentFreezePeriodRepository freezePeriods;
+    private final GroupStudentRepository memberships;
+    private final ChangeAuditService audit;
 
     public List<PaymentDto> getAll() { return invoices.findAll().stream().map(this::toDto).toList(); }
     public List<PaymentDto> getByStudent(Long studentId) { return invoices.findByStudentId(studentId).stream().map(this::toDto).toList(); }
@@ -74,24 +76,32 @@ public class PaymentService {
         if (amount == null || amount.signum() <= 0 || amount.scale() > 2)
             throw new IllegalArgumentException("Ödəniş məbləği düzgün deyil");
         if (method == null) throw new IllegalArgumentException("Ödəniş üsulu tələb olunur");
+        PaymentDto before = toDto(p);
         if (p.isFrozen() || p.getStatus() == PaymentStatus.BAGISLANIB)
             throw new IllegalArgumentException("Dondurulmuş/bağışlanmış ödənişi qəbul etmək olmaz");
         BigDecimal rest = remaining(p);
         if (amount.compareTo(rest) > 0) throw new IllegalArgumentException("Ödəniş qalıq borcdan çoxdur");
         String actor = SecurityContextHolder.getContext().getAuthentication().getName();
-        transactions.saveAndFlush(PaymentTransaction.builder()
+        PaymentTransaction transaction = transactions.saveAndFlush(PaymentTransaction.builder()
             .payment(p).amount(amount).method(method)
             .paidAt(LocalDateTime.now(ZoneId.of("Asia/Baku"))).recordedBy(actor).build());
         p.setPaymentDate(LocalDate.now());
         p.setPaymentMethod(method);
         p.setStatus(amount.compareTo(rest) == 0 ? PaymentStatus.ODENILIB : PaymentStatus.GOZLENILIR);
         invoices.save(p);
-        return toDto(p);
+        PaymentDto updated=toDto(p);
+        audit.record("PAYMENT_RECEIVED","PAYMENT",p.getId(),before,updated);
+        audit.record("CREATE","PAYMENT_TRANSACTION",transaction.getId(),null,
+            java.util.Map.of("paymentId",p.getId(),"amount",amount,"method",method.name(),
+                "recordedBy",actor,"paidAt",transaction.getPaidAt()));
+        return updated;
     }
 
     @Transactional
     public PaymentDto discount(Long id, BigDecimal value, String reason) {
         Payment p = invoices.lockById(id).orElseThrow(() -> new IllegalArgumentException("Ödəniş tapılmadı"));
+        PaymentDto before = toDto(p);
+        if (p.isFrozen()) throw new IllegalArgumentException("Dondurulmuş ayda endirim olmaz");
         if (value == null || value.signum() < 0 || value.scale() > 2)
             throw new IllegalArgumentException("Endirim düzgün deyil");
         if (value.signum() > 0 && (reason == null || reason.isBlank()))
@@ -102,17 +112,22 @@ public class PaymentService {
         p.setDiscountReason(value.signum() == 0 ? null : reason.trim());
         if (remaining(p).signum() == 0) p.setStatus(PaymentStatus.ODENILIB);
         else p.setStatus(PaymentStatus.GOZLENILIR);
-        return toDto(invoices.save(p));
+        PaymentDto updated = toDto(invoices.save(p));
+        audit.record("DISCOUNT","PAYMENT",id,before,updated);
+        return updated;
     }
 
     @Transactional
     public PaymentDto freeze(Long id, boolean freeze) {
         Payment p = invoices.lockById(id).orElseThrow(() -> new IllegalArgumentException("Ödəniş tapılmadı"));
+        PaymentDto before = toDto(p);
         if (freeze && collectedForInvoice(id).signum() > 0)
             throw new IllegalArgumentException("Ödənilmiş ayı dondurmaq olmaz");
         p.setFrozen(freeze);
         p.setStatus(freeze ? PaymentStatus.DONDURULUB : PaymentStatus.GOZLENILIR);
-        return toDto(invoices.save(p));
+        PaymentDto updated = toDto(invoices.save(p));
+        audit.record(freeze?"FREEZE":"UNFREEZE","PAYMENT",id,before,updated);
+        return updated;
     }
 
     @Scheduled(cron = "0 0 1 * * *", zone = "Asia/Baku")
@@ -133,18 +148,22 @@ public class PaymentService {
 
     @Transactional
     public PaymentDto updateStatus(Long id, PaymentStatus status) {
-        if (status == PaymentStatus.ODENILIB || status == PaymentStatus.BAGISLANIB || status == PaymentStatus.DONDURULUB)
-            throw new IllegalArgumentException("Bu statusu birbaşa dəyişmək olmaz. Ödəniş və ya dondurma istifadə edin");
-        Payment p = invoices.findById(id).orElseThrow(() -> new IllegalArgumentException("Ödəniş tapılmadı"));
-        p.setStatus(status);
-        return toDto(invoices.save(p));
+        throw new IllegalArgumentException("Ödəniş statusu avtomatik hesablanır; bu əməliyyat dəstəklənmir");
     }
 
     @Transactional
     public PaymentDto create(PaymentDto dto) {
         Student student = students.findById(dto.getStudentId()).orElseThrow(() -> new IllegalArgumentException("Tələbə tapılmadı"));
         CourseGroup group = groups.findById(dto.getGroupId()).orElseThrow(() -> new IllegalArgumentException("Qrup tapılmadı"));
+        if (dto.getAmount() == null || dto.getAmount().signum() <= 0 || dto.getAmount().scale() > 2)
+            throw new IllegalArgumentException("Aylıq məbləğ düzgün deyil");
+        if (memberships.findByGroupIdAndStudentId(group.getId(),student.getId()).isEmpty())
+            throw new IllegalArgumentException("Tələbə seçilmiş qrupda qeydiyyatda deyil");
         YearMonth period = YearMonth.of(dto.getPaymentYear(), dto.getPaymentMonth());
+        boolean exists = invoices.findByStudentIdAndGroupId(student.getId(),group.getId()).stream()
+            .anyMatch(x -> x.getPaymentYear().equals(period.getYear()) &&
+                x.getPaymentMonth().equals(period.getMonthValue()));
+        if (exists) throw new IllegalArgumentException("Bu tələbə və ay üçün hesab artıq mövcuddur");
         LocalDate due = dto.getDueDate() != null ? dto.getDueDate()
             : period.atDay(Math.min(period.lengthOfMonth(), group.getStartDate().getDayOfMonth()));
         boolean isFrozen=freezePeriods.existsByStudentIdAndYearAndMonth(student.getId(),period.getYear(),period.getMonthValue());
@@ -154,14 +173,19 @@ public class PaymentService {
             .discountAmount(BigDecimal.ZERO).frozen(isFrozen)
             .status(isFrozen?PaymentStatus.DONDURULUB:PaymentStatus.GOZLENILIR)
             .note(dto.getNote()).build();
-        return toDto(invoices.save(p));
+        PaymentDto created=toDto(invoices.save(p));
+        audit.record("CREATE","PAYMENT",created.getId(),null,created);
+        return created;
     }
 
     @Transactional
     public void delete(Long id) {
         if (collectedForInvoice(id).signum() != 0)
             throw new IllegalArgumentException("Mədaxili olan hesabı silmək olmaz");
-        invoices.deleteById(id);
+        Payment p = invoices.findById(id).orElseThrow(() -> new IllegalArgumentException("Ödəniş tapılmadı"));
+        PaymentDto before = toDto(p);
+        invoices.delete(p);
+        audit.record("DELETE","PAYMENT",id,before,null);
     }
 
     public PaymentDto toDto(Payment p) {
