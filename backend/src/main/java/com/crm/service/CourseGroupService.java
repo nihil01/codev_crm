@@ -205,9 +205,12 @@ public class CourseGroupService {
         // invoices with realized cash or matured debts remain intact.
         boolean hasReceipts=bills.stream()
             .anyMatch(b->paymentTransactions.existsByPaymentId(b.getId()));
-        boolean hasMaturedDebt=bills.stream().anyMatch(b ->
-            b.getDueDate()!=null && !b.getDueDate().isAfter(today) &&
-            paymentService.remaining(b).signum()>0);
+        boolean hasMaturedDebt=bills.stream().anyMatch(b -> {
+            // Legacy invoices may lack due_date: their invoice month still matters.
+            LocalDate due=b.getDueDate()!=null ? b.getDueDate()
+                : YearMonth.of(b.getPaymentYear(),b.getPaymentMonth()).atDay(1);
+            return !due.isAfter(today) && paymentService.remaining(b).signum()>0;
+        });
 
         if(!hasReceipts && !hasMaturedDebt) {
             paymentRepository.deleteAll(bills);
@@ -219,8 +222,9 @@ public class CourseGroupService {
             // Preserve prior due debts and actual receipts; waive only future
             // unpaid invoices so the student stops accumulating new debt.
             for(Payment bill:bills) {
-                if(bill.getDueDate()!=null && bill.getDueDate().isAfter(today) &&
-                   !paymentTransactions.existsByPaymentId(bill.getId())) {
+                LocalDate due=bill.getDueDate()!=null ? bill.getDueDate()
+                    : YearMonth.of(bill.getPaymentYear(),bill.getPaymentMonth()).atDay(1);
+                if(due.isAfter(today) && !paymentTransactions.existsByPaymentId(bill.getId())) {
                     bill.setStatus(PaymentStatus.BAGISLANIB);
                     bill.setNote((bill.getNote()==null?"":bill.getNote()+" | ")+
                         "Qrupdan ayrılıb: "+reason.trim());

@@ -41,9 +41,9 @@ class GroupMembershipWithdrawalTest {
         CourseGroup group=CourseGroup.builder().id(5L).build();
         Student student=Student.builder().id(7L).status(StudentStatus.AKTIV).build();
         GroupStudent member=GroupStudent.builder().id(12L).student(student)
-            .group(group).joinDate(LocalDate.now()).monthlyAmount(new BigDecimal("300")).build();
+            .group(group).joinDate(LocalDate.now(ZoneId.of("Asia/Baku"))).monthlyAmount(new BigDecimal("300")).build();
         Payment bill=Payment.builder().id(99L).student(student).group(group)
-            .amount(new BigDecimal("300.00")).dueDate(LocalDate.now().plusMonths(1))
+            .amount(new BigDecimal("300.00")).dueDate(LocalDate.now(ZoneId.of("Asia/Baku")).plusMonths(1))
             .status(PaymentStatus.GOZLENILIR).build();
         when(memberships.findByGroupIdAndStudentId(5L,7L)).thenReturn(Optional.of(member));
         when(invoices.findByStudentIdAndGroupId(7L,5L)).thenReturn(List.of(bill));
@@ -58,12 +58,12 @@ class GroupMembershipWithdrawalTest {
         CourseGroup group=CourseGroup.builder().id(5L).build();
         Student student=Student.builder().id(7L).status(StudentStatus.AKTIV).build();
         GroupStudent member=GroupStudent.builder().id(12L).student(student).group(group)
-            .joinDate(LocalDate.now().minusMonths(1)).monthlyAmount(new BigDecimal("300")).build();
+            .joinDate(LocalDate.now(ZoneId.of("Asia/Baku")).minusMonths(1)).monthlyAmount(new BigDecimal("300")).build();
         Payment oldBill=Payment.builder().id(21L).student(student).group(group)
-            .amount(new BigDecimal("300")).dueDate(LocalDate.now().minusDays(8))
+            .amount(new BigDecimal("300")).dueDate(LocalDate.now(ZoneId.of("Asia/Baku")).minusDays(8))
             .status(PaymentStatus.GECIKIB).build();
         Payment future=Payment.builder().id(22L).student(student).group(group)
-            .amount(new BigDecimal("300")).dueDate(LocalDate.now().plusMonths(1))
+            .amount(new BigDecimal("300")).dueDate(LocalDate.now(ZoneId.of("Asia/Baku")).plusMonths(1))
             .status(PaymentStatus.GOZLENILIR).build();
         when(memberships.findByGroupIdAndStudentId(5L,7L)).thenReturn(Optional.of(member));
         when(invoices.findByStudentIdAndGroupId(7L,5L)).thenReturn(List.of(oldBill,future));

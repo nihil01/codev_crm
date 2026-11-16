@@ -49,7 +49,7 @@ export const Leads: React.FC = () => {
   const save = useMutation({
     mutationFn:()=> edit ? leadsApi.update(edit.id,form) : leadsApi.create(form),
     onSuccess:()=>{qc.invalidateQueries({queryKey:['leads']});setModal(false);toast.success('Lead yadda saxlanıldı');},
-    onError:()=>toast.error('Lead saxlanılmadı')
+    onError:(error:any)=>toast.error(error?.response?.data?.message||'Lead saxlanılmadı',{duration:6000})
   });
   const convert = useMutation({
     mutationFn:leadsApi.convert,

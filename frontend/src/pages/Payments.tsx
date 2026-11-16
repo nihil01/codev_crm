@@ -36,7 +36,7 @@ export const Payments: React.FC = () => {
   const [createForm, setCreateForm] = useState({ studentId: 0, groupId: 0, paymentYear: now.getFullYear(), paymentMonth: now.getMonth() + 1, amount: 0, note: '' });
   const queryClient = useQueryClient();
 
-  const { data: groups = [] } = useQuery({ queryKey: ['groups-active'], queryFn: groupsApi.getActive });
+  const { data: groups = [] } = useQuery({ queryKey: ['groups-all'], queryFn: groupsApi.getAll });
   const { data: students = [] } = useQuery({ queryKey: ['students-active'], queryFn: studentsApi.getActive });
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ['payments', year, month, selectedGroup],

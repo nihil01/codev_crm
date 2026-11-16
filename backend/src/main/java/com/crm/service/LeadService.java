@@ -119,6 +119,8 @@ public class LeadService {
     }
 
     private void apply(Lead lead, LeadDto data, User actor) {
+        if(data.getStage()==LeadStage.QEYDIYYAT && lead.getConvertedStudent()==null)
+            throw new IllegalArgumentException("Qeydiyyat üçün Qeydiyyata al əməliyyatından istifadə edin");
         if(lead.getConvertedStudent()!=null && data.getStage()!=LeadStage.QEYDIYYAT)
             throw new IllegalArgumentException("Qeydiyyatdan keçmiş lead başqa mərhələyə keçirilmir");
         if (data.getStage() == LeadStage.ITIRILDI &&
