@@ -61,7 +61,10 @@ public class ExpenseService {
             .startYear(start.getYear()).startMonth(start.getMonthValue())
             .active(dto.isActive()).build();
         rule = rules.saveAndFlush(rule);
-        if (rule.isActive()) createOne(rule, start);
+        if (rule.isActive()) {
+            createOne(rule, start);
+            createOne(rule, YearMonth.now(ZoneId.of("Asia/Baku")));
+        }
         RecurringExpenseRuleDto created=toRuleDto(rule);
         audit.record("CREATE","RECURRING_EXPENSE_RULE",rule.getId(),null,created);
         return created;
@@ -83,7 +86,10 @@ public class ExpenseService {
         rule.setActive(dto.isActive());
         rule = rules.save(rule);
         // Existing months are immutable from rule edits; month-specific edits use /expenses/{id}.
-        if (rule.isActive()) createOne(rule, YearMonth.of(rule.getStartYear(), rule.getStartMonth()));
+        if (rule.isActive()) {
+            createOne(rule, YearMonth.of(rule.getStartYear(), rule.getStartMonth()));
+            createOne(rule, YearMonth.now(ZoneId.of("Asia/Baku")));
+        }
         RecurringExpenseRuleDto updated=toRuleDto(rule);
         audit.record("UPDATE","RECURRING_EXPENSE_RULE",id,before,updated);
         return updated;
@@ -209,7 +215,13 @@ public class ExpenseService {
     @Transactional
     public void generateCurrentMonth() {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Baku"));
-        createRecurringExpenses(today.getYear(), today.getMonthValue());
+        YearMonth current = YearMonth.from(today);
+        // Catch up after server downtime; unique index prevents duplicate months.
+        for (RecurringExpenseRule rule : rules.findByActiveTrueOrderByIdAsc()) {
+            YearMonth start = YearMonth.of(rule.getStartYear(),rule.getStartMonth());
+            for (YearMonth month = start; !month.isAfter(current); month = month.plusMonths(1))
+                createOne(rule, month);
+        }
     }
 
     @Transactional
