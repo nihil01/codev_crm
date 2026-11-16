@@ -198,6 +198,12 @@ export interface DashboardData {
   activeGroups: number;
   currentMonthCollected: number;
   currentMonthExpected: number;
+  /** Amount paid toward invoices issued for this month, regardless of receipt date. */
+  currentMonthPaidAgainstExpected: number;
+  /** Unpaid balance of invoices issued for this month. */
+  currentMonthOutstanding: number;
+  /** Unpaid overdue debt across all invoice months. */
+  totalOverdueDebt: number;
   collectionRate: number;
   overdueCount: number;
   recentPayments: Payment[];
@@ -208,6 +214,13 @@ export interface GroupSummary {
   groupId: number;
   groupNumber: string;
   studentCount: number;
+  /** Net billed amount for this group's invoices in the selected month. */
+  expected: number;
+  /** Payments on this group's selected-month invoices across receipt dates. */
+  paidAgainstInvoices: number;
+  /** Remaining balance against selected-month invoices. */
+  outstanding: number;
+  /** Cash received in the selected calendar month. */
   collected: number;
   teacherShare: number;
   netProfit: number;
@@ -221,6 +234,10 @@ export interface ReportData {
   overduePayments: Payment[];
   totalCollected: number;
   totalExpected: number;
+  paidAgainstExpected: number;
+  outstandingForPeriod: number;
+  totalOverdueCount: number;
+  totalOverdueDebt: number;
   collectionRate: number;
   totalIncome: number;
   totalTeacherSalaries: number;
