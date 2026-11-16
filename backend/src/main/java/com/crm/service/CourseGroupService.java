@@ -29,6 +29,7 @@ public class CourseGroupService {
     private final PaymentRepository paymentRepository;
     private final PaymentService paymentService;
     private final CourseRepository courseRepository;
+    private final StudentFreezePeriodRepository freezePeriods;
 
     public List<CourseGroupDto> getAll() {
         return groupRepository.findAll().stream()
@@ -213,12 +214,13 @@ public class CourseGroupService {
         LocalDate first = joinDate == null ? group.getStartDate() : joinDate;
         for (int i=0; i<group.getDurationMonths(); i++) {
             LocalDate due = first.plusMonths(i);
+            boolean frozen=freezePeriods.existsByStudentIdAndYearAndMonth(student.getId(),due.getYear(),due.getMonthValue());
             Payment payment = Payment.builder()
                 .student(student).group(group)
                 .paymentYear(due.getYear()).paymentMonth(due.getMonthValue())
                 .amount(monthlyAmount).dueDate(due)
-                .discountAmount(BigDecimal.ZERO).frozen(false)
-                .status(PaymentStatus.GOZLENILIR).build();
+                .discountAmount(BigDecimal.ZERO).frozen(frozen)
+                .status(frozen?PaymentStatus.DONDURULUB:PaymentStatus.GOZLENILIR).build();
             paymentRepository.save(payment);
         }
     }

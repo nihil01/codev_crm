@@ -21,6 +21,7 @@ public class PaymentService {
     private final PaymentTransactionRepository transactions;
     private final StudentRepository students;
     private final CourseGroupRepository groups;
+    private final StudentFreezePeriodRepository freezePeriods;
 
     public List<PaymentDto> getAll() { return invoices.findAll().stream().map(this::toDto).toList(); }
     public List<PaymentDto> getByStudent(Long studentId) { return invoices.findByStudentId(studentId).stream().map(this::toDto).toList(); }
@@ -141,10 +142,12 @@ public class PaymentService {
         YearMonth period = YearMonth.of(dto.getPaymentYear(), dto.getPaymentMonth());
         LocalDate due = dto.getDueDate() != null ? dto.getDueDate()
             : period.atDay(Math.min(period.lengthOfMonth(), group.getStartDate().getDayOfMonth()));
+        boolean isFrozen=freezePeriods.existsByStudentIdAndYearAndMonth(student.getId(),period.getYear(),period.getMonthValue());
         Payment p = Payment.builder().student(student).group(group)
             .paymentYear(period.getYear()).paymentMonth(period.getMonthValue())
             .amount(dto.getAmount()).dueDate(due)
-            .discountAmount(BigDecimal.ZERO).frozen(false).status(PaymentStatus.GOZLENILIR)
+            .discountAmount(BigDecimal.ZERO).frozen(isFrozen)
+            .status(isFrozen?PaymentStatus.DONDURULUB:PaymentStatus.GOZLENILIR)
             .note(dto.getNote()).build();
         return toDto(invoices.save(p));
     }
