@@ -17,6 +17,8 @@ public class DashboardDto {
     private BigDecimal currentMonthPaidAgainstExpected;
     private BigDecimal currentMonthOutstanding;
     private BigDecimal totalOverdueDebt;
+    private BigDecimal currentMonthTeacherShare;
+    private BigDecimal currentMonthAfterTeacherShare;
     private BigDecimal collectionRate;
 
     private Long overdueCount;
