@@ -17,6 +17,7 @@ import { Certificates } from './pages/Certificates';
 import { Forecast } from './pages/Forecast';
 import { Role } from './types';
 import { Managers } from './pages/Managers';
+import { Leads } from './pages/Leads';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -53,6 +54,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/forecast" element={<ProtectedRoute adminOnly><Forecast /></ProtectedRoute>} />
       <Route path="/certificates" element={<ProtectedRoute adminOnly><Certificates /></ProtectedRoute>} />
       <Route path="/managers" element={<ProtectedRoute adminOnly><Managers /></ProtectedRoute>} />
+      <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

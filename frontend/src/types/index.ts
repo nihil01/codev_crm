@@ -50,6 +50,25 @@ export interface AuthResponse {
   role: Role;
 }
 
+export type LeadSource = 'INSTAGRAM'|'WHATSAPP'|'TIKTOK'|'ZENG'|'TOVSIYE'|'SAYT'|'BIRBASA_GELIS';
+export type LeadStage = 'YENI'|'ELAQE_SAXLANILDI'|'SINAQ_KONSULTASIYA'|'DUSUNUR'|'QEYDIYYAT'|'ITIRILDI';
+export type StudentStatus = 'AKTIV'|'DONDURULUB'|'BITIRIB'|'AYRILIB';
+
+export interface Lead {
+  id: number;
+  fullName: string;
+  phone: string;
+  source: LeadSource;
+  stage: LeadStage;
+  assignedManagerId?: number | null;
+  assignedManagerName?: string;
+  consultationAt?: string;
+  lostReason?: string;
+  interestedCourse?: string;
+  note?: string;
+  createdAt?: string;
+}
+
 export interface Student {
   id: number;
   firstName: string;
