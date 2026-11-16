@@ -79,7 +79,8 @@ public class ReportService {
         for (CourseGroup group : activeGroups) {
             List<PaymentDto> groupPayments = paymentService.getByGroupAndPeriod(group.getId(), year, month);
             total = total.add(groupPayments.stream()
-                .map(PaymentDto::getAmount)
+                .filter(p->!p.isFrozen())
+                .map(p->p.getAmount().subtract(p.getDiscountAmount()==null?BigDecimal.ZERO:p.getDiscountAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
         }
         return total;
