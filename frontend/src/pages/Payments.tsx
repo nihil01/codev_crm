@@ -36,7 +36,7 @@ export const Payments: React.FC = () => {
   const [createForm, setCreateForm] = useState({ studentId: 0, groupId: 0, paymentYear: now.getFullYear(), paymentMonth: now.getMonth() + 1, amount: 0, note: '' });
   const queryClient = useQueryClient();
 
-  const { data: groups = [] } = useQuery({ queryKey: ['groups-active'], queryFn: groupsApi.getActive });
+  const { data: groups = [] } = useQuery({ queryKey: ['groups-all'], queryFn: groupsApi.getAll });
   const { data: students = [] } = useQuery({ queryKey: ['students-active'], queryFn: studentsApi.getActive });
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ['payments', year, month, selectedGroup],
@@ -99,8 +99,12 @@ export const Payments: React.FC = () => {
     pending: payments.filter((p) => p.status === PaymentStatus.GOZLENILIR),
     overdue: payments.filter((p) => p.status === PaymentStatus.GECIKIB),
   };
-  const totalCollected = payments.reduce((sum,p)=>sum+(p.paidAmount||0),0);
-  const totalExpected = payments.reduce((sum,p)=>sum+p.amount-(p.discountAmount||0),0);
+  // The selection is by invoice month, NOT by the cash transaction date.
+  const billable=payments.filter(p=>!p.frozen &&
+    p.status!==PaymentStatus.DONDURULUB && p.status!==PaymentStatus.BAGISLANIB);
+  const totalPaidAgainstInvoices=billable.reduce((sum,p)=>sum+(p.paidAmount||0),0);
+  const totalExpected=billable.reduce((sum,p)=>sum+Math.max(0,p.amount-(p.discountAmount||0)),0);
+  const totalRemaining=billable.reduce((sum,p)=>sum+(p.remainingAmount||0),0);
   const inputCls = `w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-300 ${t.inputBgModal}`;
 
   return (
@@ -122,10 +126,11 @@ export const Payments: React.FC = () => {
         </div>
       </div>
 
-      {isAdmin && <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className={`${t.cardBg} border rounded-xl p-4 transition-colors duration-300`}><p className={`text-sm ${t.muted}`}>Toplanmış</p><p className="text-2xl font-bold text-emerald-400">{totalCollected.toLocaleString()} AZN</p></div>
-        <div className={`${t.cardBg} border rounded-xl p-4 transition-colors duration-300`}><p className={`text-sm ${t.muted}`}>Gözlənilən</p><p className="text-2xl font-bold text-blue-400">{totalExpected.toLocaleString()} AZN</p></div>
-        <div className={`${t.cardBg} border rounded-xl p-4 transition-colors duration-300`}><p className={`text-sm ${t.muted}`}>Ödənilib</p><p className={`text-2xl font-bold transition-colors duration-300 ${t.title}`}>{grouped.paid.length}</p></div>
+      {isAdmin && <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className={`${t.cardBg} border rounded-xl p-4 transition-colors duration-300`}><p className={`text-sm ${t.muted}`}>Seçilən ayın hesablarına ödənilib</p><p className="text-2xl font-bold text-emerald-400">{totalPaidAgainstInvoices.toLocaleString()} AZN</p></div>
+        <div className={`${t.cardBg} border rounded-xl p-4 transition-colors duration-300`}><p className={`text-sm ${t.muted}`}>Seçilən ay üçün hesablanıb</p><p className="text-2xl font-bold text-blue-400">{totalExpected.toLocaleString()} AZN</p></div>
+        <div className={`${t.cardBg} border rounded-xl p-4 transition-colors duration-300`}><p className={`text-sm ${t.muted}`}>Ödənilməmiş qalıq</p><p className="text-2xl font-bold text-amber-400">{totalRemaining.toLocaleString()} AZN</p></div>
+        <div className={`${t.cardBg} border rounded-xl p-4 transition-colors duration-300`}><p className={`text-sm ${t.muted}`}>Bağlanmış hesablar</p><p className={`text-2xl font-bold transition-colors duration-300 ${t.title}`}>{grouped.paid.length}</p></div>
         <div className={`${t.cardBg} border rounded-xl p-4 transition-colors duration-300`}><p className={`text-sm ${t.muted}`}>Gecikib</p><p className="text-2xl font-bold text-red-400">{grouped.overdue.length}</p></div>
       </div>}
 

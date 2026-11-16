@@ -29,14 +29,27 @@ export const Leads: React.FC = () => {
   const [form,setForm] = useState<Partial<Lead>>(blank);
   const [modal,setModal] = useState(false);
   const [query,setQuery] = useState('');
+  const [draggingId,setDraggingId] = useState<number|null>(null);
+  const [dragOverStage,setDragOverStage] = useState<Lead['stage']|null>(null);
   const {data:leads=[], isLoading} = useQuery({queryKey:['leads'],queryFn:leadsApi.getAll});
   const {data:managers=[]} = useQuery<Manager[]>({
     queryKey:['managers'],queryFn:async()=> (await api.get('/admin/managers')).data,enabled:isAdmin
   });
+  const stageMove = useMutation({
+    mutationFn: ({id,stage,lostReason,consultationAt}:{
+      id:number;stage:Lead['stage'];lostReason?:string;consultationAt?:string
+    }) => leadsApi.moveStage(id,{stage,lostReason,consultationAt}),
+    onSuccess:()=>{
+      qc.invalidateQueries({queryKey:['leads']});
+      toast.success('Lead yeni mərhələyə keçirildi');
+    },
+    onError:(error:any)=>toast.error(error?.response?.data?.message||
+      'Mərhələ dəyişdirilmədi',{duration:6000})
+  });
   const save = useMutation({
     mutationFn:()=> edit ? leadsApi.update(edit.id,form) : leadsApi.create(form),
     onSuccess:()=>{qc.invalidateQueries({queryKey:['leads']});setModal(false);toast.success('Lead yadda saxlanıldı');},
-    onError:()=>toast.error('Lead saxlanılmadı')
+    onError:(error:any)=>toast.error(error?.response?.data?.message||'Lead saxlanılmadı',{duration:6000})
   });
   const convert = useMutation({
     mutationFn:leadsApi.convert,
@@ -53,6 +66,44 @@ export const Leads: React.FC = () => {
     setForm(lead?{...lead,consultationAt:lead.consultationAt?.slice(0,16)||''}:{...blank});
     setModal(true);
   };
+  const changeStage = (lead:Lead,target:Lead['stage'])=>{
+    if(target===lead.stage || stageMove.isPending || convert.isPending)return;
+    if(lead.convertedStudentId && target!=='QEYDIYYAT'){
+      toast.error('Qeydiyyatdan keçmiş lead başqa mərhələyə keçirilmir');
+      return;
+    }
+    if(target==='QEYDIYYAT'){
+      if(!window.confirm('Bu leaddən yeni tələbə yaradılacaq. Davam edilsin?'))return;
+      convert.mutate(lead.id);
+      return;
+    }
+    let lostReason: string|undefined;
+    let consultationAt: string|undefined;
+    if(target==='ITIRILDI'){
+      const reason=window.prompt('Lead niyə itirilib? Səbəbi yazın:');
+      if(!reason?.trim())return;
+      lostReason=reason.trim();
+    }
+    if(target==='SINAQ_KONSULTASIYA'){
+      const entered=window.prompt('Sınaq / konsultasiya tarixi (YYYY-MM-DDTHH:mm):',
+        lead.consultationAt?.slice(0,16)||'');
+      if(!entered)return;
+      if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(entered) ||
+         Number.isNaN(new Date(entered).getTime())){
+        toast.error('Tarix formatı yanlışdır. Nümunə: 2026-11-20T14:30');return;
+      }
+      consultationAt=entered;
+    }
+    stageMove.mutate({id:lead.id,stage:target,lostReason,consultationAt});
+  };
+  const dropLead=(event:React.DragEvent<HTMLElement>,stage:Lead['stage'])=>{
+    event.preventDefault();
+    const raw=event.dataTransfer.getData('text/plain');
+    const id=Number(raw||draggingId);
+    setDraggingId(null);setDragOverStage(null);
+    const lead=leads.find(l=>l.id===id);
+    if(lead)changeStage(lead,stage);
+  };
   const filtered=leads.filter(l=>(l.fullName+' '+l.phone+' '+(l.interestedCourse||'')).toLowerCase().includes(query.toLowerCase()));
   const input='w-full rounded-lg border border-slate-300 bg-white p-2 text-slate-900';
   return <section className="space-y-5">
@@ -63,14 +114,34 @@ export const Leads: React.FC = () => {
     <input className={input} placeholder="Ad, telefon və kurs üzrə axtarış" value={query} onChange={e=>setQuery(e.target.value)}/>
     {isLoading && <p>Yüklənir...</p>}
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {stages.map(stage=><div key={stage.id} className="rounded-xl border border-slate-300/30 bg-slate-500/5 p-3 min-h-48">
+      {stages.map(stage=><div key={stage.id}
+        aria-label={`Mərhələ: ${stage.name}`}
+        onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect='move';setDragOverStage(stage.id);}}
+        onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))setDragOverStage(null);}}
+        onDrop={e=>dropLead(e,stage.id)}
+        className={`rounded-xl border p-3 min-h-48 transition-colors ${dragOverStage===stage.id
+          ? 'border-indigo-500 bg-indigo-500/20 ring-2 ring-indigo-500/40'
+          : 'border-slate-300/30 bg-slate-500/5'}`}>
         <h2 className="mb-3 font-semibold">{stage.name} ({filtered.filter(l=>l.stage===stage.id).length})</h2>
         <div className="space-y-2">{filtered.filter(l=>l.stage===stage.id).map(l=>
-          <div key={l.id} className="rounded-lg border border-slate-300/20 bg-white/10 p-3">
+          <div key={l.id} draggable={!stageMove.isPending && !convert.isPending}
+            onDragStart={e=>{e.dataTransfer.setData('text/plain',String(l.id));e.dataTransfer.effectAllowed='move';setDraggingId(l.id);}}
+            onDragEnd={()=>{setDraggingId(null);setDragOverStage(null);}}
+            className={`rounded-lg border border-slate-300/20 bg-white/10 p-3 cursor-grab active:cursor-grabbing
+              ${draggingId===l.id?'opacity-40':''}`}>
             <div className="font-semibold">{l.fullName}</div>
             <div className="text-sm opacity-70">{l.phone} · {sources[l.source]}</div>
             {l.interestedCourse && <div className="text-sm">{l.interestedCourse}</div>}
             {l.assignedManagerName && <p className="text-xs opacity-70">Menecer: {l.assignedManagerName}</p>}
+            <div className="mt-2">
+              <label className="text-xs opacity-70" htmlFor={`lead-stage-${l.id}`}>Mərhələni dəyiş</label>
+              <select id={`lead-stage-${l.id}`} aria-label="Mərhələni dəyiş"
+                className="mt-1 w-full rounded border border-slate-300/30 bg-slate-900 text-white p-1 text-xs"
+                value={l.stage} disabled={stageMove.isPending||convert.isPending}
+                onChange={e=>changeStage(l,e.target.value as Lead['stage'])}>
+                {stages.map(option=><option key={option.id} value={option.id}>{option.name}</option>)}
+              </select>
+            </div>
             <div className="mt-3 flex gap-3 text-sm">
               <button onClick={()=>open(l)} className="text-indigo-500">Dəyiş</button>
               {!l.convertedStudentId&&<button disabled={convert.isPending} onClick={()=>{if(window.confirm('Leaddən tələbə yaratmaq istəyirsiniz?'))convert.mutate(l.id);}} className="text-emerald-500">Qeydiyyata al</button>}

@@ -16,6 +16,10 @@ public class ReportDto {
     private List<PaymentDto> overduePayments;
     private BigDecimal totalCollected;
     private BigDecimal totalExpected;
+    private BigDecimal paidAgainstExpected;
+    private BigDecimal outstandingForPeriod;
+    private BigDecimal totalOverdueDebt;
+    private Long totalOverdueCount;
     private BigDecimal collectionRate;
 
     // Profit report

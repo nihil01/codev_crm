@@ -89,8 +89,9 @@ public class CourseGroupController {
 
     @DeleteMapping("/{groupId}/students/{studentId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> removeStudent(@PathVariable Long groupId, @PathVariable Long studentId) {
-        courseGroupService.removeStudentFromGroup(groupId, studentId);
+    public ResponseEntity<Void> removeStudent(@PathVariable Long groupId, @PathVariable Long studentId,
+            @RequestParam String reason) {
+        courseGroupService.removeStudentFromGroup(groupId, studentId, reason);
         return ResponseEntity.ok().build();
     }
 

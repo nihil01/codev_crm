@@ -62,21 +62,23 @@ export const Dashboard: React.FC = () => {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className={`${cardBg} border rounded-xl p-5 transition-colors duration-300`}>
           <div className="flex items-center gap-2 mb-2">
             <ArrowUpRight size={18} className="text-emerald-400" />
-            <span className={`text-sm ${mutedText}`}>Toplanmış</span>
+            <span className={`text-sm ${mutedText}`}>Bu ay faktiki mədaxil (kassa)</span>
           </div>
           <p className="text-3xl font-bold text-emerald-400">{data.currentMonthCollected?.toLocaleString()} AZN</p>
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className={`${cardBg} border rounded-xl p-5 transition-colors duration-300`}>
           <div className="flex items-center gap-2 mb-2">
             <ArrowDownRight size={18} className="text-blue-400" />
-            <span className={`text-sm ${mutedText}`}>Gözlənilən</span>
+            <span className={`text-sm ${mutedText}`}>Bu ay üzrə hesablanıb</span>
           </div>
           <p className="text-3xl font-bold text-blue-400">{data.currentMonthExpected?.toLocaleString()} AZN</p>
+          <p className={`text-xs mt-2 ${mutedText}`}>Bu ayın hesablarına ödənilib: {data.currentMonthPaidAgainstExpected?.toLocaleString()} AZN</p>
+          <p className={`text-xs ${mutedText}`}>Ödənilməmiş qalıq: {data.currentMonthOutstanding?.toLocaleString()} AZN</p>
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className={`${cardBg} border rounded-xl p-5 transition-colors duration-300`}>
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp size={18} className="text-indigo-400" />
-            <span className={`text-sm ${mutedText}`}>Toplama Faizi</span>
+            <span className={`text-sm ${mutedText}`}>Bu ayın hesabları üzrə ödəniş faizi</span>
           </div>
           <p className="text-3xl font-bold text-indigo-400">{data.collectionRate?.toFixed(1)}%</p>
           <div className={`mt-2 w-full rounded-full h-2 ${progressBg} transition-colors duration-300`}>
@@ -94,9 +96,12 @@ export const Dashboard: React.FC = () => {
                 <tr className={`${mutedText} border-b ${rowBorder} transition-colors duration-300`}>
                   <th className="text-left py-2">Qrup</th>
                   <th className="text-left py-2">Tələbələr</th>
-                  <th className="text-right py-2">Toplanmış</th>
+                  <th className="text-right py-2">Hesablanıb</th>
+                  <th className="text-right py-2">Hesablara ödənilib</th>
+                  <th className="text-right py-2">Qalıq</th>
+                  <th className="text-right py-2">Bu ay kassaya daxil olub</th>
                   <th className="text-right py-2">Müəllim Payı</th>
-                  <th className="text-right py-2">Xalis Qazanc</th>
+                  <th className="text-right py-2">Müəllim payından sonra</th>
                 </tr>
               </thead>
               <tbody>
@@ -104,6 +109,9 @@ export const Dashboard: React.FC = () => {
                   <tr key={gs.groupId} className={`border-b ${rowBorder} ${rowHover} transition-colors duration-300`}>
                     <td className={`py-3 font-medium transition-colors duration-300 ${titleColor}`}>{gs.groupNumber}</td>
                     <td className={`py-3 ${mutedText}`}>{gs.studentCount}</td>
+                    <td className="py-3 text-right text-blue-400">{gs.expected?.toLocaleString()} AZN</td>
+                    <td className="py-3 text-right text-emerald-400">{gs.paidAgainstInvoices?.toLocaleString()} AZN</td>
+                    <td className="py-3 text-right text-amber-400">{gs.outstanding?.toLocaleString()} AZN</td>
                     <td className="py-3 text-right text-emerald-400">{gs.collected?.toLocaleString()} AZN</td>
                     <td className="py-3 text-right text-orange-400">{gs.teacherShare?.toLocaleString()} AZN</td>
                     <td className={`py-3 text-right font-medium transition-colors duration-300 ${titleColor}`}>{gs.netProfit?.toLocaleString()} AZN</td>
@@ -117,7 +125,7 @@ export const Dashboard: React.FC = () => {
 
       {data.recentPayments && data.recentPayments.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }} className={`${cardBg} border rounded-xl p-5 transition-colors duration-300`}>
-          <h2 className={`text-lg font-semibold mb-4 transition-colors duration-300 ${titleColor}`}>Son Ödənişlər</h2>
+          <h2 className={`text-lg font-semibold mb-4 transition-colors duration-300 ${titleColor}`}>Bu Ayın Hesabları (mədaxil əməliyyatları deyil)</h2>
           <div className="space-y-2">
             {data.recentPayments.slice(0, 5).map((p) => (
               <div key={p.id} className={`flex items-center justify-between p-3 rounded-lg transition-colors duration-300 ${itemBg}`}>

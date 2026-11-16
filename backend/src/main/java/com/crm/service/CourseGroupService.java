@@ -156,11 +156,13 @@ public class CourseGroupService {
         Student student = studentRepository.findById(dto.getStudentId())
             .orElseThrow(() -> new RuntimeException("Tələbə tapılmadı"));
 
-        if (group.getMaxStudents()!=null && groupStudentRepository.findByGroupId(groupId).size()>=group.getMaxStudents())
+        if (group.getMaxStudents()!=null && groupStudentRepository.findByGroupId(groupId).stream()
+            .filter(m->m.getLeftAt()==null && !m.getStudent().isArchived() &&
+                m.getStudent().getStatus()==com.crm.enums.StudentStatus.AKTIV).count()>=group.getMaxStudents())
             throw new IllegalArgumentException("Qrupun maksimum tələbə sayı dolub");
 
         if (groupStudentRepository.findByGroupIdAndStudentId(groupId, dto.getStudentId()).isPresent()) {
-            throw new RuntimeException("Bu tələbə artıq bu qrupdadır");
+            throw new IllegalArgumentException("Bu tələbə üçün qrup qeydiyyatı artıq mövcuddur; əvvəlki qeydiyyatı əl ilə yoxlayın");
         }
 
         GroupStudent gs = GroupStudent.builder()
@@ -188,28 +190,59 @@ public class CourseGroupService {
     }
 
     @Transactional
-    public void removeStudentFromGroup(Long groupId, Long studentId) {
-        GroupStudent gs = groupStudentRepository.findByGroupIdAndStudentId(groupId, studentId)
-            .orElseThrow(() -> new RuntimeException("Tələbə bu qrupda deyil"));
+    public void removeStudentFromGroup(Long groupId, Long studentId, String reason) {
+        GroupStudent membership = groupStudentRepository.findByGroupIdAndStudentId(groupId,studentId)
+            .orElseThrow(()->new IllegalArgumentException("Tələbə bu qrupda deyil"));
+        if(membership.getLeftAt()!=null)
+            throw new IllegalArgumentException("Tələbə artıq bu qrupdan ayrılıb");
+        if(reason==null || reason.isBlank())
+            throw new IllegalArgumentException("Qrupdan ayrılma səbəbi yazılmalıdır");
+        GroupStudentDto before=toGroupStudentDto(membership);
+        LocalDate today=LocalDate.now(java.time.ZoneId.of("Asia/Baku"));
+        List<Payment> bills=paymentRepository.findByStudentIdAndGroupId(studentId,groupId);
 
-        if (!paymentRepository.findByStudentIdAndGroupId(studentId,groupId).isEmpty())
-            throw new IllegalArgumentException("Ödəniş tarixi olan qeydiyyatı silmək olmaz; tələbəni Ayrılıb edin");
-        GroupStudentDto before = toGroupStudentDto(gs);
-        Student student = studentRepository.findById(studentId).orElse(null);
-        if (student != null && student.getGroup() != null && student.getGroup().getId().equals(groupId)) {
-            // Student's primary group was removed — find another group or set null
-            List<GroupStudent> remaining = groupStudentRepository.findByStudentId(studentId);
-            CourseGroup newPrimary = remaining.stream()
-                .map(GroupStudent::getGroup)
-                .filter(g -> !g.getId().equals(groupId))
-                .findFirst()
-                .orElse(null);
-            student.setGroup(newPrimary);
+        // Never delete cash history. Unpaid future invoices can be removed;
+        // invoices with realized cash or matured debts remain intact.
+        boolean hasReceipts=bills.stream()
+            .anyMatch(b->paymentTransactions.existsByPaymentId(b.getId()));
+        boolean hasMaturedDebt=bills.stream().anyMatch(b -> {
+            // Legacy invoices may lack due_date: their invoice month still matters.
+            LocalDate due=b.getDueDate()!=null ? b.getDueDate()
+                : YearMonth.of(b.getPaymentYear(),b.getPaymentMonth()).atDay(1);
+            return !due.isAfter(today) && paymentService.remaining(b).signum()>0;
+        });
+
+        if(!hasReceipts && !hasMaturedDebt) {
+            paymentRepository.deleteAll(bills);
+            groupStudentRepository.delete(membership);
+            audit.record("REMOVE_UNUSED","GROUP_STUDENT",membership.getId(),before,null);
+        } else {
+            membership.setLeftAt(today);
+            membership.setExitReason(reason.trim());
+            // Preserve prior due debts and actual receipts; waive only future
+            // unpaid invoices so the student stops accumulating new debt.
+            for(Payment bill:bills) {
+                LocalDate due=bill.getDueDate()!=null ? bill.getDueDate()
+                    : YearMonth.of(bill.getPaymentYear(),bill.getPaymentMonth()).atDay(1);
+                if(due.isAfter(today) && !paymentTransactions.existsByPaymentId(bill.getId())) {
+                    bill.setStatus(PaymentStatus.BAGISLANIB);
+                    bill.setNote((bill.getNote()==null?"":bill.getNote()+" | ")+
+                        "Qrupdan ayrılıb: "+reason.trim());
+                    paymentRepository.save(bill);
+                }
+            }
+            groupStudentRepository.save(membership);
+            audit.record("WITHDRAW","GROUP_STUDENT",membership.getId(),
+                before,toGroupStudentDto(membership));
+        }
+        Student student=membership.getStudent();
+        if(student.getGroup()!=null && student.getGroup().getId().equals(groupId)){
+            CourseGroup next=groupStudentRepository.findByStudentId(studentId).stream()
+                .filter(m->m.getLeftAt()==null && !m.getGroup().getId().equals(groupId))
+                .map(GroupStudent::getGroup).findFirst().orElse(null);
+            student.setGroup(next);
             studentRepository.save(student);
         }
-
-        groupStudentRepository.delete(gs);
-        audit.record("REMOVE","GROUP_STUDENT",gs.getId(),before,null);
     }
 
     // === Group Teachers ===
@@ -348,7 +381,9 @@ public class CourseGroupService {
         group.setRoom(dto.getRoom());
         group.setMaxStudents(dto.getMaxStudents());
         if(group.getMaxStudents()!=null &&
-           group.getMaxStudents()<groupStudentRepository.findByGroupId(group.getId()==null?-1L:group.getId()).size())
+           group.getMaxStudents()<groupStudentRepository.findByGroupId(group.getId()==null?-1L:group.getId()).stream()
+               .filter(m->m.getLeftAt()==null && !m.getStudent().isArchived() &&
+                   m.getStudent().getStatus()==com.crm.enums.StudentStatus.AKTIV).count())
             throw new IllegalArgumentException("Maksimum tələbə sayı mövcud iştirakçılardan az ola bilməz");
     }
 
@@ -376,6 +411,10 @@ public class CourseGroupService {
         dto.setStudentId(gs.getStudent().getId());
         dto.setMonthlyAmount(gs.getMonthlyAmount());
         dto.setJoinDate(gs.getJoinDate());
+        dto.setLeftAt(gs.getLeftAt());
+        dto.setExitReason(gs.getExitReason());
+        dto.setStudentArchived(gs.getStudent().isArchived());
+        dto.setStudentStatus(gs.getStudent().getStatus().name());
         dto.setNote(gs.getNote());
         dto.setStudentFirstName(gs.getStudent().getFirstName());
         dto.setStudentLastName(gs.getStudent().getLastName());

@@ -27,6 +27,7 @@ public class ReportService {
     private final CourseGroupService courseGroupService;
     private final CourseGroupRepository groupRepository;
     private final TeacherShareAllocationRepository allocations;
+    private final BillingMetricsService billingMetrics;
 
     public ReportDto getMonthlyReport(Integer year, Integer month) {
         ReportDto report = new ReportDto();
@@ -42,15 +43,15 @@ public class ReportService {
         BigDecimal collected = paymentService.getCollectedForMonth(year, month);
         report.setTotalCollected(collected);
 
-        BigDecimal expected = calculateExpected(year, month);
-        report.setTotalExpected(expected);
-
-        if (expected.compareTo(BigDecimal.ZERO) > 0) {
-            report.setCollectionRate(collected.multiply(BigDecimal.valueOf(100))
-                .divide(expected, 2, RoundingMode.HALF_UP));
-        } else {
-            report.setCollectionRate(BigDecimal.ZERO);
-        }
+        BillingMetricsService.InvoiceTotals billed=BillingMetricsService.fromInvoices(allPayments);
+        report.setTotalExpected(billed.expected());
+        report.setPaidAgainstExpected(billed.paidAgainstInvoices());
+        report.setOutstandingForPeriod(billed.remaining());
+        report.setCollectionRate(billed.collectionRate());
+        var overdueAll=billingMetrics.allOverdue();
+        report.setTotalOverdueCount((long)overdueAll.size());
+        report.setTotalOverdueDebt(overdueAll.stream().map(PaymentDto::getRemainingAmount)
+            .reduce(BigDecimal.ZERO,BigDecimal::add));
 
         // Profit report
         report.setTotalIncome(collected);
@@ -73,20 +74,6 @@ public class ReportService {
         report.setMonthlyComparison(getMonthlyComparison(year, month));
 
         return report;
-    }
-
-    private BigDecimal calculateExpected(Integer year, Integer month) {
-        List<CourseGroup> activeGroups = groupRepository.findByStatusIn(List.of(GroupStatus.AKTIV,GroupStatus.BASLAYIB));
-        BigDecimal total = BigDecimal.ZERO;
-
-        for (CourseGroup group : activeGroups) {
-            List<PaymentDto> groupPayments = paymentService.getByGroupAndPeriod(group.getId(), year, month);
-            total = total.add(groupPayments.stream()
-                .filter(p->!p.isFrozen())
-                .map(p->p.getAmount().subtract(p.getDiscountAmount()==null?BigDecimal.ZERO:p.getDiscountAmount()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
-        }
-        return total;
     }
 
     private BigDecimal calculateTeacherSalaries(Integer year, Integer month) {

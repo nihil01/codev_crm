@@ -10,6 +10,7 @@ import java.util.List;
 
 public interface PaymentTransactionRepository extends JpaRepository<PaymentTransaction, Long> {
     List<PaymentTransaction> findByPaymentIdOrderByPaidAtDesc(Long paymentId);
+    boolean existsByPaymentId(Long paymentId);
     java.util.Optional<PaymentTransaction> findByPaymentIdAndIdempotencyKey(Long paymentId, String idempotencyKey);
 
     @Query("SELECT COUNT(t)>0 FROM PaymentTransaction t WHERE t.payment.group.id=:groupId AND t.paidAt>=:fromDate")
