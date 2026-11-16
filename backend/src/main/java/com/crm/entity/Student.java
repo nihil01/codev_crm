@@ -34,6 +34,9 @@ public class Student {
 
     private String phone;
 
+    @Column(nullable = false)
+    private boolean reminderConsent = false;
+
     private LocalDate birthDate;
 
     @Enumerated(EnumType.STRING)

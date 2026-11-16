@@ -7,6 +7,8 @@ import com.crm.enums.ExpenseType;
 import com.crm.enums.GroupStatus;
 import com.crm.enums.PaymentStatus;
 import com.crm.repository.CourseGroupRepository;
+import com.crm.repository.TeacherShareAllocationRepository;
+import java.time.YearMonth;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +26,7 @@ public class ReportService {
     private final ExpenseService expenseService;
     private final CourseGroupService courseGroupService;
     private final CourseGroupRepository groupRepository;
+    private final TeacherShareAllocationRepository allocations;
 
     public ReportDto getMonthlyReport(Integer year, Integer month) {
         ReportDto report = new ReportDto();
@@ -87,13 +90,10 @@ public class ReportService {
     }
 
     private BigDecimal calculateTeacherSalaries(Integer year, Integer month) {
-        List<CourseGroup> activeGroups = groupRepository.findByStatusIn(List.of(GroupStatus.AKTIV,GroupStatus.BASLAYIB));
-        BigDecimal total = BigDecimal.ZERO;
-
-        for (CourseGroup group : activeGroups) {
-            total = total.add(courseGroupService.calculateTeacherSalary(group.getId(), year, month));
-        }
-        return total;
+        // Historical accrued salaries must not change when a group is suspended or completed.
+        YearMonth period=YearMonth.of(year,month);
+        return allocations.sumAllForPeriod(period.atDay(1).atStartOfDay(),
+            period.plusMonths(1).atDay(1).atStartOfDay());
     }
 
     private BigDecimal calculateFixedExpensesForMonth(Integer year, Integer month) {

@@ -73,9 +73,11 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**", "/api/audit/**", "/api/dashboard/**",
                     "/api/expenses/**", "/api/reports/**", "/api/forecast/**",
                     "/api/certificate/**").hasRole("ADMIN")
+                .requestMatchers("/api/teacher-portal/**").hasRole("TEACHER")
+                .requestMatchers("/api/auth/me", "/api/auth/logout").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/payments/collected/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/groups/*/teachers").hasRole("ADMIN")
-                .anyRequest().authenticated()
+                .anyRequest().hasAnyRole("ADMIN", "MANAGER")
             )
             .authenticationProvider(authenticationProvider(userRepository))
             .httpBasic(AbstractHttpConfigurer::disable)

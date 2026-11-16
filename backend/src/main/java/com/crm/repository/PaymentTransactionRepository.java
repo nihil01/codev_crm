@@ -19,7 +19,7 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
     BigDecimal sumForInvoice(@Param("paymentId") Long paymentId);
 
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM PaymentTransaction t " +
-      "WHERE t.paidAt >= :start AND t.paidAt < :end AND t.payment.group.status NOT IN ('DAYANDIRILMIS')")
+      "WHERE t.paidAt >= :start AND t.paidAt < :end")
     BigDecimal sumCollectedForPeriod(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM PaymentTransaction t " +

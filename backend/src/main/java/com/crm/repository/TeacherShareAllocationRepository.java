@@ -27,6 +27,11 @@ public interface TeacherShareAllocationRepository extends JpaRepository<TeacherS
     List<Object[]> totalsByTeacherForPeriod(@Param("start") LocalDateTime start,
                                              @Param("end") LocalDateTime end);
 
+    @Query("SELECT COALESCE(SUM(a.amount),0) FROM TeacherShareAllocation a " +
+           "WHERE a.paymentTransaction.paidAt >= :start AND a.paymentTransaction.paidAt < :end")
+    BigDecimal sumAllForPeriod(@Param("start") LocalDateTime start,
+                               @Param("end") LocalDateTime end);
+
     boolean existsByGroupTeacherId(Long groupTeacherId);
     List<TeacherShareAllocation> findByTeacherId(Long teacherId);
 }

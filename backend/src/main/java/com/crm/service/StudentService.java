@@ -74,6 +74,7 @@ public class StudentService {
             .fin(fin)
             .email(dto.getEmail())
             .phone(dto.getPhone())
+            .reminderConsent(dto.isReminderConsent())
             .birthDate(dto.getBirthDate())
             .source(dto.getSource())
             .parentName(dto.getParentName())
@@ -108,6 +109,7 @@ public class StudentService {
         student.setFin(fin);
         student.setEmail(dto.getEmail());
         student.setPhone(dto.getPhone());
+        student.setReminderConsent(dto.isReminderConsent());
         student.setBirthDate(dto.getBirthDate());
         student.setSource(dto.getSource());
         student.setParentName(dto.getParentName());
@@ -180,6 +182,7 @@ public class StudentService {
         dto.setFin(s.getFin());
         dto.setEmail(s.getEmail());
         dto.setPhone(s.getPhone());
+        dto.setReminderConsent(s.isReminderConsent());
         dto.setBirthDate(s.getBirthDate());
         dto.setSource(s.getSource());
         dto.setParentName(s.getParentName());

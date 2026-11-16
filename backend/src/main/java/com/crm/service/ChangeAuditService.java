@@ -67,11 +67,29 @@ public class ChangeAuditService {
 
     private Map<String,Object> safeMap(Object item) {
         if (item == null) return Map.of();
-        Map<String,Object> map = mapper.convertValue(
-            item, new TypeReference<LinkedHashMap<String,Object>>() {});
-        map.entrySet().removeIf(e -> SECRET_KEYS.contains(
-            e.getKey().toLowerCase(Locale.ROOT).replace("_","").replace("-","")));
-        return map;
+        Map<String,Object> raw=mapper.convertValue(item,
+            new TypeReference<LinkedHashMap<String,Object>>() {});
+        @SuppressWarnings("unchecked")
+        Map<String,Object> cleaned=(Map<String,Object>)sanitize(raw);
+        return cleaned;
+    }
+
+    private Object sanitize(Object value) {
+        if (value instanceof Map<?,?> raw) {
+            Map<String,Object> result=new LinkedHashMap<>();
+            for (var entry:raw.entrySet()) {
+                String key=String.valueOf(entry.getKey());
+                String normalized=key.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]","");
+                if (SECRET_KEYS.contains(normalized) || normalized.endsWith("password") ||
+                    normalized.endsWith("token") || normalized.endsWith("secret") ||
+                    normalized.endsWith("apikey")) continue;
+                result.put(key,sanitize(entry.getValue()));
+            }
+            return result;
+        }
+        if (value instanceof Collection<?> list)
+            return list.stream().map(this::sanitize).toList();
+        return value;
     }
 
     private String toJson(Object item) {
