@@ -22,11 +22,13 @@ import {
   UserCog,
   ClipboardList,
   History,
+  MessageSquareText,
 } from 'lucide-react';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/leads', label: 'Leadlər', icon: ClipboardList },
+  { path: '/reminders', label: 'Xatırlatmalar', icon: MessageSquareText },
   { path: '/students', label: 'Tələbələr', icon: Users },
   { path: '/teachers', label: 'Müəllimlər', icon: GraduationCap },
   { path: '/groups', label: 'Qruplar', icon: Layers },
