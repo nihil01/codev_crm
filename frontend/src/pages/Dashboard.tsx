@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { dashboardApi } from '../api/dashboard';
 import { useTheme } from '../context/ThemeContext';
-import { Users, GraduationCap, Layers, TrendingUp, AlertTriangle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Users, GraduationCap, Layers, AlertTriangle } from 'lucide-react';
 
 const monthNames = ['', 'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'İyun', 'İyul', 'Avqust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
 
@@ -58,33 +58,44 @@ export const Dashboard: React.FC = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className={`${cardBg} border rounded-xl p-5 transition-colors duration-300`}>
-          <div className="flex items-center gap-2 mb-2">
-            <ArrowUpRight size={18} className="text-emerald-400" />
-            <span className={`text-sm ${mutedText}`}>Bu ay faktiki mədaxil (kassa)</span>
-          </div>
-          <p className="text-3xl font-bold text-emerald-400">{data.currentMonthCollected?.toLocaleString()} AZN</p>
-        </motion.div>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className={`${cardBg} border rounded-xl p-5 transition-colors duration-300`}>
-          <div className="flex items-center gap-2 mb-2">
-            <ArrowDownRight size={18} className="text-blue-400" />
-            <span className={`text-sm ${mutedText}`}>Bu ay üzrə hesablanıb</span>
-          </div>
-          <p className="text-3xl font-bold text-blue-400">{data.currentMonthExpected?.toLocaleString()} AZN</p>
-          <p className={`text-xs mt-2 ${mutedText}`}>Bu ayın hesablarına ödənilib: {data.currentMonthPaidAgainstExpected?.toLocaleString()} AZN</p>
-          <p className={`text-xs ${mutedText}`}>Ödənilməmiş qalıq: {data.currentMonthOutstanding?.toLocaleString()} AZN</p>
-        </motion.div>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className={`${cardBg} border rounded-xl p-5 transition-colors duration-300`}>
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp size={18} className="text-indigo-400" />
-            <span className={`text-sm ${mutedText}`}>Bu ayın hesabları üzrə ödəniş faizi</span>
-          </div>
-          <p className="text-3xl font-bold text-indigo-400">{data.collectionRate?.toFixed(1)}%</p>
-          <div className={`mt-2 w-full rounded-full h-2 ${progressBg} transition-colors duration-300`}>
-            <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(data.collectionRate || 0, 100)}%` }} transition={{ duration: 1, delay: 0.8 }} className="h-2 bg-indigo-500 rounded-full" />
-          </div>
-        </motion.div>
+      {/* Invoiced-month metrics and real cash are distinct accounting periods. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        {([
+          { label: 'Hesablanıb', value: data.currentMonthExpected, color: 'text-blue-400',
+            note: 'Bu ayın endirimlərdən sonrakı hesabları' },
+          { label: 'Hesablara ödənilib', value: data.currentMonthPaidAgainstExpected, color: 'text-emerald-400',
+            note: 'Aşağıdakı “Hesablara ödənilib” sütununun cəmi' },
+          { label: 'Qalıq', value: data.currentMonthOutstanding, color: 'text-amber-400',
+            note: 'Bu ayın hesabları üzrə ödənilməmiş borc' },
+          { label: 'Bu ay kassaya daxil olub', value: data.currentMonthCollected, color: 'text-cyan-400',
+            note: 'Ödənişin faktiki daxilolma tarixinə görə' },
+          { label: 'Müəllim Payı', value: data.currentMonthTeacherShare, color: 'text-orange-400',
+            note: 'Bu ayın mədaxilindən hesablanan paylar' },
+          { label: 'Müəllim payından sonra', value: data.currentMonthAfterTeacherShare, color: 'text-violet-400',
+            note: 'Kassa mədaxili − müəllim payı; digər xərclər xaric' },
+        ] as const).map((item, i) => (
+          <motion.div key={item.label} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.06 }}
+            className={`${cardBg} border rounded-xl p-5 transition-colors duration-300`}>
+            <p className={`text-sm mb-2 ${mutedText}`}>{item.label}</p>
+            <p className={`text-2xl font-bold tabular-nums ${item.color}`}>
+              {Number(item.value ?? 0).toLocaleString('az-AZ', { maximumFractionDigits: 2 })} AZN
+            </p>
+            <p className={`text-xs mt-2 ${mutedText}`}>{item.note}</p>
+          </motion.div>
+        ))}
+      </div>
+      <div className={`${cardBg} border rounded-xl p-4 transition-colors duration-300`}>
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <span className={`text-sm ${mutedText}`}>Bu ayın hesabları üzrə ödəniş faizi</span>
+          <span className="font-semibold text-indigo-400">
+            {Number(data.collectionRate ?? 0).toFixed(1)}%
+          </span>
+        </div>
+        <div className={`w-full rounded-full h-2 ${progressBg}`}>
+          <div className="h-2 bg-indigo-500 rounded-full transition-all"
+            style={{ width: `${Math.max(0, Math.min(Number(data.collectionRate ?? 0), 100))}%` }} />
+        </div>
       </div>
 
       {data.groupSummaries && data.groupSummaries.length > 0 && (
@@ -118,6 +129,18 @@ export const Dashboard: React.FC = () => {
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className={`border-t-2 ${rowBorder} font-semibold ${titleColor}`}>
+                  <td className="py-3">Cəmi</td>
+                  <td className={`py-3 text-xs ${mutedText}`}>Unikal tələbələr yuxarıda</td>
+                  <td className="py-3 text-right text-blue-400">{data.currentMonthExpected?.toLocaleString()} AZN</td>
+                  <td className="py-3 text-right text-emerald-400">{data.currentMonthPaidAgainstExpected?.toLocaleString()} AZN</td>
+                  <td className="py-3 text-right text-amber-400">{data.currentMonthOutstanding?.toLocaleString()} AZN</td>
+                  <td className="py-3 text-right text-cyan-400">{data.currentMonthCollected?.toLocaleString()} AZN</td>
+                  <td className="py-3 text-right text-orange-400">{data.currentMonthTeacherShare?.toLocaleString()} AZN</td>
+                  <td className="py-3 text-right">{data.currentMonthAfterTeacherShare?.toLocaleString()} AZN</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </motion.div>
