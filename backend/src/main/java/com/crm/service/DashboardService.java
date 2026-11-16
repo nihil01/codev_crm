@@ -70,6 +70,11 @@ public class DashboardService {
                 .filter(m->m.getLeftAt()==null && !m.getStudent().isArchived() &&
                     m.getStudent().getStatus()==StudentStatus.AKTIV)
                 .count());
+            BillingMetricsService.InvoiceTotals groupBills=BillingMetricsService.fromInvoices(
+                paymentService.getByGroupAndPeriod(group.getId(),year,month));
+            gs.setExpected(groupBills.expected());
+            gs.setPaidAgainstInvoices(groupBills.paidAgainstInvoices());
+            gs.setOutstanding(groupBills.remaining());
             gs.setCollected(courseGroupService.calculateGroupCollected(group.getId(), year, month));
             gs.setTeacherShare(courseGroupService.calculateTeacherSalary(group.getId(), year, month));
             gs.setNetProfit(gs.getCollected().subtract(gs.getTeacherShare()));

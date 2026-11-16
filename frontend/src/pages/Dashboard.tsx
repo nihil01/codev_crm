@@ -96,9 +96,12 @@ export const Dashboard: React.FC = () => {
                 <tr className={`${mutedText} border-b ${rowBorder} transition-colors duration-300`}>
                   <th className="text-left py-2">Qrup</th>
                   <th className="text-left py-2">Tələbələr</th>
-                  <th className="text-right py-2">Toplanmış</th>
+                  <th className="text-right py-2">Hesablanıb</th>
+                  <th className="text-right py-2">Hesablara ödənilib</th>
+                  <th className="text-right py-2">Qalıq</th>
+                  <th className="text-right py-2">Bu ay kassaya daxil olub</th>
                   <th className="text-right py-2">Müəllim Payı</th>
-                  <th className="text-right py-2">Xalis Qazanc</th>
+                  <th className="text-right py-2">Müəllim payından sonra</th>
                 </tr>
               </thead>
               <tbody>
@@ -106,6 +109,9 @@ export const Dashboard: React.FC = () => {
                   <tr key={gs.groupId} className={`border-b ${rowBorder} ${rowHover} transition-colors duration-300`}>
                     <td className={`py-3 font-medium transition-colors duration-300 ${titleColor}`}>{gs.groupNumber}</td>
                     <td className={`py-3 ${mutedText}`}>{gs.studentCount}</td>
+                    <td className="py-3 text-right text-blue-400">{gs.expected?.toLocaleString()} AZN</td>
+                    <td className="py-3 text-right text-emerald-400">{gs.paidAgainstInvoices?.toLocaleString()} AZN</td>
+                    <td className="py-3 text-right text-amber-400">{gs.outstanding?.toLocaleString()} AZN</td>
                     <td className="py-3 text-right text-emerald-400">{gs.collected?.toLocaleString()} AZN</td>
                     <td className="py-3 text-right text-orange-400">{gs.teacherShare?.toLocaleString()} AZN</td>
                     <td className={`py-3 text-right font-medium transition-colors duration-300 ${titleColor}`}>{gs.netProfit?.toLocaleString()} AZN</td>

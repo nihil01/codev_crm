@@ -30,6 +30,8 @@ public class DashboardDto {
         private Long studentCount;
         private BigDecimal collected;
         private BigDecimal expected;
+        private BigDecimal paidAgainstInvoices;
+        private BigDecimal outstanding;
         private BigDecimal teacherShare;
         private BigDecimal netProfit;
     }
