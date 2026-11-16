@@ -31,7 +31,11 @@ public class PaymentService {
         return invoices.findByGroupAndPeriod(id, year, month).stream().map(this::toDto).toList();
     }
     public List<PaymentDto> getOverdue(Integer year, Integer month) {
-        return getByPeriod(year, month).stream().filter(p -> p.getStatus() == PaymentStatus.GECIKIB).toList();
+        return getByPeriod(year, month).stream()
+            .filter(p -> p.getStatus() == PaymentStatus.GECIKIB)
+            .filter(p -> groups.findById(p.getGroupId())
+                .map(g -> g.getStatus() != com.crm.enums.GroupStatus.DAYANDIRILMIS).orElse(false))
+            .toList();
     }
     public BigDecimal getCollectedForMonth(Integer year, Integer month) {
         YearMonth period = YearMonth.of(year, month);
@@ -76,7 +80,8 @@ public class PaymentService {
         if (amount.compareTo(rest) > 0) throw new IllegalArgumentException("Ödəniş qalıq borcdan çoxdur");
         String actor = SecurityContextHolder.getContext().getAuthentication().getName();
         transactions.saveAndFlush(PaymentTransaction.builder()
-            .payment(p).amount(amount).method(method).paidAt(LocalDateTime.now()).recordedBy(actor).build());
+            .payment(p).amount(amount).method(method)
+            .paidAt(LocalDateTime.now(ZoneId.of("Asia/Baku"))).recordedBy(actor).build());
         p.setPaymentDate(LocalDate.now());
         p.setPaymentMethod(method);
         p.setStatus(amount.compareTo(rest) == 0 ? PaymentStatus.ODENILIB : PaymentStatus.GOZLENILIR);

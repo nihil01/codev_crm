@@ -8,6 +8,7 @@ import com.crm.enums.GroupStatus;
 import com.crm.enums.PaymentStatus;
 import com.crm.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +31,8 @@ public class CourseGroupService {
     private final PaymentService paymentService;
     private final CourseRepository courseRepository;
     private final StudentFreezePeriodRepository freezePeriods;
+    @Value("${app.billing.first-payment-delay-months:0}")
+    private int firstPaymentDelayMonths;
 
     public List<CourseGroupDto> getAll() {
         return groupRepository.findAll().stream()
@@ -212,6 +215,9 @@ public class CourseGroupService {
     private void createPaymentSchedule(Student student, CourseGroup group, BigDecimal monthlyAmount, LocalDate joinDate) {
         // Billing starts at enrolment. Exactly durationMonths invoices, not durationMonths+1.
         LocalDate first = joinDate == null ? group.getStartDate() : joinDate;
+        if(firstPaymentDelayMonths!=0 && firstPaymentDelayMonths!=1)
+            throw new IllegalStateException("First payment delay must be 0 or 1 month");
+        first=first.plusMonths(firstPaymentDelayMonths);
         for (int i=0; i<group.getDurationMonths(); i++) {
             LocalDate due = first.plusMonths(i);
             boolean frozen=freezePeriods.existsByStudentIdAndYearAndMonth(student.getId(),due.getYear(),due.getMonthValue());

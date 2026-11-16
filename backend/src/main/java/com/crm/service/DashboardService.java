@@ -78,6 +78,11 @@ public class DashboardService {
     }
 
     private BigDecimal calculateExpectedForMonth(Integer year, Integer month) {
-        return paymentRepository.sumExpectedForMonth(year, month);
+        return paymentService.getByPeriod(year,month).stream()
+            .filter(p->!p.isFrozen())
+            .filter(p->groupRepository.findById(p.getGroupId()).map(g->
+                g.getStatus()==GroupStatus.AKTIV||g.getStatus()==GroupStatus.BASLAYIB).orElse(false))
+            .map(p->p.getAmount().subtract(p.getDiscountAmount()==null?BigDecimal.ZERO:p.getDiscountAmount()))
+            .reduce(BigDecimal.ZERO,BigDecimal::add);
     }
 }

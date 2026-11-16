@@ -25,6 +25,7 @@ public class PaymentController {
 
     private final PaymentService paymentService;
     private final PaymentReceiptService receiptService;
+    private final com.crm.repository.CourseGroupRepository groups;
 
     @GetMapping
     public ResponseEntity<List<PaymentDto>> getAll() {
@@ -123,6 +124,8 @@ public class PaymentController {
             .filter(p -> p.getDueDate() != null && !p.getDueDate().isAfter(now)
                 && p.getRemainingAmount().signum() > 0
                 && !p.isFrozen() && p.getStatus() != PaymentStatus.DONDURULUB)
+            .filter(p -> groups.findById(p.getGroupId()).map(g->
+                g.getStatus()!=com.crm.enums.GroupStatus.DAYANDIRILMIS).orElse(false))
             .map(p -> {
                 Map<String,Object> item = new java.util.LinkedHashMap<>();
                 item.put("paymentId",p.getId());

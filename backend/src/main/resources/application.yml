@@ -56,6 +56,8 @@ app:
   cors:
     allowed-origins: http://localhost:5173,http://localhost:3000,https://crm.codev.academy,https://codev.academy
 
+  billing:
+    first-payment-delay-months: ${CRM_FIRST_PAYMENT_DELAY_MONTHS:0}
   bootstrap-admin:
     email: ${CRM_BOOTSTRAP_ADMIN_EMAIL:}
     password: ${CRM_BOOTSTRAP_ADMIN_PASSWORD:}
