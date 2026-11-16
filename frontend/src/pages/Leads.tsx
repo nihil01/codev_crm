@@ -88,7 +88,7 @@ export const Leads: React.FC = () => {
       const entered=window.prompt('Sınaq / konsultasiya tarixi (YYYY-MM-DDTHH:mm):',
         lead.consultationAt?.slice(0,16)||'');
       if(!entered)return;
-      if(!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$/.test(entered) ||
+      if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(entered) ||
          Number.isNaN(new Date(entered).getTime())){
         toast.error('Tarix formatı yanlışdır. Nümunə: 2026-11-20T14:30');return;
       }

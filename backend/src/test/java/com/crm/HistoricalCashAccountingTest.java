@@ -5,6 +5,7 @@ import com.crm.repository.TeacherShareAllocationRepository;
 import com.crm.service.ExpenseService;
 import com.crm.service.PaymentService;
 import com.crm.service.ReportService;
+import com.crm.service.BillingMetricsService;
 import com.crm.service.CourseGroupService;
 import com.crm.repository.CourseGroupRepository;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ class HistoricalCashAccountingTest {
     @Mock CourseGroupService groups;
     @Mock CourseGroupRepository groupRepository;
     @Mock TeacherShareAllocationRepository allocations;
+    @Mock BillingMetricsService billingMetrics;
     @InjectMocks ReportService reports;
 
     @Test
@@ -35,7 +37,6 @@ class HistoricalCashAccountingTest {
         when(payments.getByPeriod(2026,11)).thenReturn(List.of());
         when(payments.getCollectedForMonth(anyInt(),anyInt())).thenReturn(BigDecimal.ZERO);
         when(payments.getCollectedForMonth(2026,11)).thenReturn(new BigDecimal("300.00"));
-        when(groupRepository.findByStatusIn(any())).thenReturn(List.of());
         when(allocations.sumAllForPeriod(any(LocalDateTime.class),any(LocalDateTime.class)))
             .thenReturn(new BigDecimal("90.00"));
         when(expenses.getTotalOneTime(2026,11)).thenReturn(BigDecimal.ZERO);
