@@ -1,5 +1,6 @@
 export enum Role {
   ADMIN = 'ADMIN',
+  MANAGER = 'MANAGER',
 }
 
 export enum GroupStatus {
@@ -77,6 +78,13 @@ export interface Student {
   email: string;
   phone?: string;
   birthDate?: string;
+  source?: LeadSource;
+  parentName?: string;
+  parentPhone?: string;
+  address?: string;
+  note?: string;
+  status?: StudentStatus;
+  exitReason?: string;
   groupId?: number;
   registrationDate: string;
   archived: boolean;

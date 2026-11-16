@@ -21,6 +21,7 @@ import {
   Moon,
   UserCog,
   ClipboardList,
+  History,
 } from 'lucide-react';
 
 const navItems = [
@@ -34,6 +35,7 @@ const navItems = [
   { path: '/reports', label: 'Hesabatlar', icon: BarChart3 },
   { path: '/forecast', label: 'Proqnoz', icon: TrendingUp },
   { path: '/managers', label: 'Menecerlər', icon: UserCog },
+  { path: '/audit', label: 'Dəyişiklik tarixçəsi', icon: History },
   { path: '/certificates', label: 'Sertifikatlar', icon: Award },
 ];
 
@@ -81,7 +83,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </div>
 
         <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-          {navItems.filter((item) => user?.role === 'ADMIN' || !['/', '/expenses', '/reports', '/forecast', '/certificates', '/managers'].includes(item.path)).map((item) => {
+          {navItems.filter((item) => user?.role === 'ADMIN' || !['/', '/expenses', '/reports', '/forecast', '/certificates', '/managers', '/audit'].includes(item.path)).map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link
@@ -136,7 +138,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 </button>
               </div>
               <nav className="py-4 px-2 space-y-1">
-                {navItems.filter((item) => user?.role === 'ADMIN' || !['/', '/expenses', '/reports', '/forecast', '/certificates', '/managers'].includes(item.path)).map((item) => {
+                {navItems.filter((item) => user?.role === 'ADMIN' || !['/', '/expenses', '/reports', '/forecast', '/certificates', '/managers', '/audit'].includes(item.path)).map((item) => {
                   const isActive = location.pathname === item.path;
                   return (
                     <Link key={item.path} to={item.path} onClick={() => setMobileOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${isActive ? navActive : `${navText} ${navHover}`}`}>

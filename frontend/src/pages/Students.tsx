@@ -7,7 +7,7 @@ import { useThemeClasses } from '../lib/theme';
 import { Plus, Search, Edit2, Trash2, Archive, ArchiveRestore, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const emptyStudent: Partial<Student> = { firstName: '', lastName: '', fin: '', email: '', phone: '', birthDate: '' };
+const emptyStudent: Partial<Student> = { firstName: '', lastName: '', fin: '', email: '', phone: '', birthDate: '', status: 'AKTIV', parentName: '', parentPhone: '', address: '', note: '', source: 'INSTAGRAM', exitReason: '' };
 
 export const Students: React.FC = () => {
   const t = useThemeClasses();
@@ -128,10 +128,17 @@ export const Students: React.FC = () => {
                     <div><label className={`block text-sm mb-1 ${t.label}`}>Ad</label><input type="text" value={form.firstName || ''} onChange={(e) => setForm({ ...form, firstName: e.target.value })} className={inputCls} required /></div>
                     <div><label className={`block text-sm mb-1 ${t.label}`}>Soyad</label><input type="text" value={form.lastName || ''} onChange={(e) => setForm({ ...form, lastName: e.target.value })} className={inputCls} required /></div>
                   </div>
-                  <div><label className={`block text-sm mb-1 ${t.label}`}>FİN (7 simvol)</label><input type="text" value={form.fin || ''} onChange={(e) => setForm({ ...form, fin: e.target.value })} className={`${inputCls} font-mono`} maxLength={7} required /></div>
+                  <div><label className={`block text-sm mb-1 ${t.label}`}>FİN (7 simvol)</label><input type="text" value={form.fin || ''} onChange={(e) => setForm({ ...form, fin: e.target.value })} className={`${inputCls} font-mono`} maxLength={7} /></div>
                   <div><label className={`block text-sm mb-1 ${t.label}`}>Doğum tarixi</label><input type="date" value={form.birthDate || ''} onChange={(e) => setForm({ ...form, birthDate: e.target.value })} className={inputCls} /></div>
-                  <div><label className={`block text-sm mb-1 ${t.label}`}>E-poçt</label><input type="email" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputCls} required /></div>
+                  <div><label className={`block text-sm mb-1 ${t.label}`}>E-poçt</label><input type="email" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputCls} /></div>
                   <div><label className={`block text-sm mb-1 ${t.label}`}>Telefon</label><input type="text" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputCls} /></div>
+                  <div><label className={`block text-sm mb-1 ${t.label}`}>Mənbə</label><select value={form.source || ''} onChange={e=>setForm({...form,source:e.target.value as Student['source']})} className={inputCls}><option value="">Seçin</option><option value="INSTAGRAM">Instagram</option><option value="WHATSAPP">WhatsApp</option><option value="TIKTOK">TikTok</option><option value="ZENG">Zəng</option><option value="TOVSIYE">Tövsiyə</option><option value="SAYT">Sayt</option><option value="BIRBASA_GELIS">Birbaşa gəliş</option></select></div>
+                  <div><label className={`block text-sm mb-1 ${t.label}`}>Valideyn adı</label><input className={inputCls} value={form.parentName || ''} onChange={e=>setForm({...form,parentName:e.target.value})}/></div>
+                  <div><label className={`block text-sm mb-1 ${t.label}`}>Valideyn telefonu</label><input className={inputCls} value={form.parentPhone || ''} onChange={e=>setForm({...form,parentPhone:e.target.value})}/></div>
+                  <div><label className={`block text-sm mb-1 ${t.label}`}>Ünvan</label><input className={inputCls} value={form.address || ''} onChange={e=>setForm({...form,address:e.target.value})}/></div>
+                  <div><label className={`block text-sm mb-1 ${t.label}`}>Status</label><select value={form.status || 'AKTIV'} onChange={e=>setForm({...form,status:e.target.value as Student['status']})} className={inputCls}><option value="AKTIV">Aktiv</option><option value="DONDURULUB">Dondurulub</option><option value="BITIRIB">Bitirib</option><option value="AYRILIB">Ayrılıb</option></select></div>
+                  {form.status==='AYRILIB' && <div><label className={`block text-sm mb-1 ${t.label}`}>Ayrılma səbəbi</label><textarea required className={inputCls} value={form.exitReason || ''} onChange={e=>setForm({...form,exitReason:e.target.value})}/></div>}
+                  <div><label className={`block text-sm mb-1 ${t.label}`}>Qeyd</label><textarea className={inputCls} value={form.note || ''} onChange={e=>setForm({...form,note:e.target.value})}/></div>
                   <div className="flex gap-3 pt-2">
                     <button type="button" onClick={closeModal} className={`flex-1 py-2 rounded-lg transition-colors ${t.cancelBtn}`}>Ləğv Et</button>
                     <button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50">

@@ -2,6 +2,7 @@ package com.crm.service;
 
 import com.crm.dto.StudentDto;
 import com.crm.entity.Student;
+import com.crm.enums.StudentStatus;
 import com.crm.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -49,17 +50,26 @@ public class StudentService {
 
     @Transactional
     public StudentDto create(StudentDto dto) {
-        if (studentRepository.existsByFin(dto.getFin())) {
-            throw new RuntimeException("Bu FİN artıq mövcuddur");
+        String fin = normalizeFin(dto.getFin());
+        if (fin != null && studentRepository.existsByFin(fin)) {
+            throw new IllegalArgumentException("Bu FİN artıq mövcuddur");
         }
+        validateExit(dto);
 
         Student student = Student.builder()
             .firstName(dto.getFirstName())
             .lastName(dto.getLastName())
-            .fin(dto.getFin())
+            .fin(fin)
             .email(dto.getEmail())
             .phone(dto.getPhone())
             .birthDate(dto.getBirthDate())
+            .source(dto.getSource())
+            .parentName(dto.getParentName())
+            .parentPhone(dto.getParentPhone())
+            .address(dto.getAddress())
+            .note(dto.getNote())
+            .status(dto.getStatus() == null ? StudentStatus.AKTIV : dto.getStatus())
+            .exitReason(dto.getExitReason())
             .registrationDate(LocalDate.now())
             .archived(false)
             .build();
@@ -74,10 +84,21 @@ public class StudentService {
 
         student.setFirstName(dto.getFirstName());
         student.setLastName(dto.getLastName());
-        student.setFin(dto.getFin());
+        String fin = normalizeFin(dto.getFin());
+        if (fin != null && studentRepository.existsByFin(fin) && !fin.equals(student.getFin()))
+            throw new IllegalArgumentException("Bu FİN artıq mövcuddur");
+        validateExit(dto);
+        student.setFin(fin);
         student.setEmail(dto.getEmail());
         student.setPhone(dto.getPhone());
         student.setBirthDate(dto.getBirthDate());
+        student.setSource(dto.getSource());
+        student.setParentName(dto.getParentName());
+        student.setParentPhone(dto.getParentPhone());
+        student.setAddress(dto.getAddress());
+        student.setNote(dto.getNote());
+        student.setStatus(dto.getStatus() == null ? StudentStatus.AKTIV : dto.getStatus());
+        student.setExitReason(dto.getStatus() == StudentStatus.AYRILIB ? dto.getExitReason() : null);
         student.setArchived(dto.isArchived());
 
         return toDto(studentRepository.save(student));
@@ -96,6 +117,18 @@ public class StudentService {
         studentRepository.deleteById(id);
     }
 
+    private static String normalizeFin(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        return raw.trim().toUpperCase(java.util.Locale.ROOT);
+    }
+
+    private static void validateExit(StudentDto dto) {
+        if (dto.getStatus() == StudentStatus.AYRILIB &&
+            (dto.getExitReason() == null || dto.getExitReason().isBlank())) {
+            throw new IllegalArgumentException("Ayrılmış tələbə üçün səbəb məcburidir");
+        }
+    }
+
     private StudentDto toDto(Student s) {
         StudentDto dto = new StudentDto();
         dto.setId(s.getId());
@@ -105,6 +138,13 @@ public class StudentService {
         dto.setEmail(s.getEmail());
         dto.setPhone(s.getPhone());
         dto.setBirthDate(s.getBirthDate());
+        dto.setSource(s.getSource());
+        dto.setParentName(s.getParentName());
+        dto.setParentPhone(s.getParentPhone());
+        dto.setAddress(s.getAddress());
+        dto.setNote(s.getNote());
+        dto.setStatus(s.getStatus());
+        dto.setExitReason(s.getExitReason());
         dto.setRegistrationDate(s.getRegistrationDate());
         dto.setArchived(s.isArchived());
         if (s.getGroup() != null) {

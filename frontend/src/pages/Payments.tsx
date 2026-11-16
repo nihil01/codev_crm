@@ -8,6 +8,7 @@ import { Payment, PaymentStatus, PaymentMethod } from '../types';
 import { useThemeClasses } from '../lib/theme';
 import { Plus, Trash2, Check, X as XIcon, Clock, AlertTriangle, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 
 const statusConfig: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
   ODENILIB: { color: 'text-emerald-400 bg-emerald-500/10', icon: <Check size={14} />, label: 'Ödənilib' },
@@ -19,6 +20,8 @@ const monthNames = ['', 'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'İyun', 'İ
 
 export const Payments: React.FC = () => {
   const t = useThemeClasses();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -76,16 +79,16 @@ export const Payments: React.FC = () => {
           <select value={year} onChange={(e) => setYear(+e.target.value)} className={`px-3 py-2 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-300 ${t.inputBgModal}`}>
             {[2024, 2025, 2026, 2027].map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-1 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm"><Plus size={16} /></button>
+          {isAdmin && <button onClick={() => setShowCreate(true)} className="flex items-center gap-1 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm"><Plus size={16} /></button>}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      {isAdmin && <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className={`${t.cardBg} border rounded-xl p-4 transition-colors duration-300`}><p className={`text-sm ${t.muted}`}>Toplanmış</p><p className="text-2xl font-bold text-emerald-400">{totalCollected.toLocaleString()} AZN</p></div>
         <div className={`${t.cardBg} border rounded-xl p-4 transition-colors duration-300`}><p className={`text-sm ${t.muted}`}>Gözlənilən</p><p className="text-2xl font-bold text-blue-400">{totalExpected.toLocaleString()} AZN</p></div>
         <div className={`${t.cardBg} border rounded-xl p-4 transition-colors duration-300`}><p className={`text-sm ${t.muted}`}>Ödənilib</p><p className={`text-2xl font-bold transition-colors duration-300 ${t.title}`}>{grouped.paid.length}</p></div>
         <div className={`${t.cardBg} border rounded-xl p-4 transition-colors duration-300`}><p className={`text-sm ${t.muted}`}>Gecikib</p><p className="text-2xl font-bold text-red-400">{grouped.overdue.length}</p></div>
-      </div>
+      </div>}
 
       <div className={`${t.cardBg} border rounded-xl overflow-hidden transition-colors duration-300`}>
         <div className="overflow-x-auto">
@@ -110,7 +113,7 @@ export const Payments: React.FC = () => {
                         {p.status !== PaymentStatus.ODENILIB && p.status !== PaymentStatus.BAGISLANIB && (
                           <button onClick={() => setPayModal(p)} className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded-lg transition-colors">Ödə</button>
                         )}
-                        <button onClick={() => { if (confirm('Silmək istəyirsiniz?')) deletePaymentMutation.mutate(p.id); }} className={`p-1 rounded transition-colors ${t.iconBtnDanger}`} title="Sil"><Trash2 size={14} /></button>
+                        {isAdmin && <button onClick={() => { if (confirm('Silmək istəyirsiniz?')) deletePaymentMutation.mutate(p.id); }} className={`p-1 rounded transition-colors ${t.iconBtnDanger}`} title="Sil"><Trash2 size={14} /></button>}
                       </div>
                     </td>
                   </motion.tr>
