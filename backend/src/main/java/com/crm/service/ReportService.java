@@ -55,13 +55,13 @@ public class ReportService {
         BigDecimal teacherSalaries = calculateTeacherSalaries(year, month);
         report.setTotalTeacherSalaries(teacherSalaries);
 
-        BigDecimal utilityExpenses = expenseService.getTotalExpenses(year, month);
+        BigDecimal utilityExpenses = expenseService.getTotalOneTime(year, month);
         report.setTotalUtilityExpenses(utilityExpenses);
 
-        BigDecimal fixedExpenses = calculateFixedExpensesForMonth(year, month);
+        BigDecimal fixedExpenses = expenseService.getTotalRecurring(year, month);
         report.setTotalFixedExpenses(fixedExpenses);
 
-        BigDecimal totalExpenses = teacherSalaries.add(utilityExpenses);
+        BigDecimal totalExpenses = teacherSalaries.add(utilityExpenses).add(fixedExpenses);
         report.setTotalExpenses(totalExpenses);
 
         report.setNetProfit(collected.subtract(totalExpenses));
@@ -96,9 +96,7 @@ public class ReportService {
     }
 
     private BigDecimal calculateFixedExpensesForMonth(Integer year, Integer month) {
-        return expenseService.getRecurring().stream()
-            .map(e -> e.getAmount())
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return expenseService.getTotalRecurring(year,month);
     }
 
     private List<ReportDto.MonthlyComparison> getMonthlyComparison(Integer currentYear, Integer currentMonth) {

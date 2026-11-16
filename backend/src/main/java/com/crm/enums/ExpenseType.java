@@ -7,5 +7,8 @@ public enum ExpenseType {
     ELEKTRIK,      // Электричество
     SU,            // Вода
     QAZ,           // Газ
-    DIGER          // Другое
+    DIGER,         // Другое
+    REKLAM,
+    KOMMUNAL,
+    AVADANLIQ
 }

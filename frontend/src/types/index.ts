@@ -38,6 +38,9 @@ export enum ExpenseType {
   SU = 'SU',
   QAZ = 'QAZ',
   DIGER = 'DIGER',
+  REKLAM = 'REKLAM',
+  KOMMUNAL = 'KOMMUNAL',
+  AVADANLIQ = 'AVADANLIQ',
 }
 
 export interface User {
@@ -173,6 +176,7 @@ export interface Expense {
   expenseMonth: number;
   recurring: boolean;
   description?: string;
+  adChannel?: string;
 }
 
 export interface DashboardData {

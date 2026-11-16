@@ -6,6 +6,7 @@ import com.crm.enums.ExpenseType;
 import com.crm.repository.ExpenseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -51,6 +52,7 @@ public class ExpenseService {
                     .expenseMonth(m)
                     .recurring(true)
                     .description(dto.getDescription())
+                    .adChannel(dto.getAdChannel())
                     .build();
                 expenseRepository.save(expense);
             }
@@ -68,6 +70,7 @@ public class ExpenseService {
                 .expenseMonth(dto.getExpenseMonth())
                 .recurring(false)
                 .description(dto.getDescription())
+                .adChannel(dto.getAdChannel())
                 .build();
             return toDto(expenseRepository.save(expense));
         }
@@ -81,24 +84,18 @@ public class ExpenseService {
         boolean wasRecurring = expense.getRecurring();
 
         if (wasRecurring && dto.getRecurring()) {
-            // Update ALL recurring expenses in this group (same type+description+year)
-            for (int m = 1; m <= 12; m++) {
-                List<Expense> monthExpenses = expenseRepository.findByExpenseYearAndExpenseMonth(expense.getExpenseYear(), m);
-                for (Expense related : monthExpenses) {
-                    if (related.getRecurring() && related.getType() == expense.getType()
-                            && sameDescription(related.getDescription(), expense.getDescription())) {
-                        related.setAmount(dto.getAmount());
-                        related.setDescription(dto.getDescription());
-                        expenseRepository.save(related);
-                    }
-                }
-            }
+            // Monthly override: never rewrite another month's expense.
+            expense.setAmount(dto.getAmount());
+            expense.setDescription(dto.getDescription());
+            expense.setAdChannel(dto.getAdChannel());
+            expenseRepository.save(expense);
         } else if (wasRecurring && !dto.getRecurring()) {
             // Was recurring, now single: delete all other months in this group, keep this one
             deleteRecurringGroup(expense.getType(), expense.getExpenseYear(), expense.getDescription());
             expense.setRecurring(false);
             expense.setAmount(dto.getAmount());
             expense.setDescription(dto.getDescription());
+            expense.setAdChannel(dto.getAdChannel());
             expenseRepository.save(expense);
         } else if (dto.getRecurring()) {
             // Was single, now recurring: delete current, create for all months
@@ -111,6 +108,7 @@ public class ExpenseService {
                     .expenseMonth(m)
                     .recurring(true)
                     .description(dto.getDescription())
+                    .adChannel(dto.getAdChannel())
                     .build();
                 expenseRepository.save(newExpense);
             }
@@ -127,6 +125,7 @@ public class ExpenseService {
             expense.setExpenseMonth(dto.getExpenseMonth());
             expense.setRecurring(false);
             expense.setDescription(dto.getDescription());
+            expense.setAdChannel(dto.getAdChannel());
             expenseRepository.save(expense);
         }
 
@@ -165,6 +164,13 @@ public class ExpenseService {
         return a.trim().equals(b.trim());
     }
 
+    @Scheduled(cron="0 10 0 1 * *",zone="Asia/Baku")
+    @Transactional
+    public void generateCurrentMonth() {
+        java.time.LocalDate date = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Baku"));
+        createRecurringExpenses(date.getYear(),date.getMonthValue());
+    }
+
     @Transactional
     public void createRecurringExpenses(Integer year, Integer month) {
         List<Expense> recurring = expenseRepository.findByRecurring(true);
@@ -181,10 +187,23 @@ public class ExpenseService {
                     .expenseMonth(month)
                     .recurring(true)
                     .description(recurringExpense.getDescription())
+                    .adChannel(recurringExpense.getAdChannel())
                     .build();
                 expenseRepository.save(newExpense);
             }
         }
+    }
+
+    public BigDecimal getTotalRecurring(Integer year,Integer month) {
+        return expenseRepository.findByExpenseYearAndExpenseMonth(year,month).stream()
+            .filter(e -> Boolean.TRUE.equals(e.getRecurring())).map(Expense::getAmount)
+            .reduce(BigDecimal.ZERO,BigDecimal::add);
+    }
+
+    public BigDecimal getTotalOneTime(Integer year,Integer month) {
+        return expenseRepository.findByExpenseYearAndExpenseMonth(year,month).stream()
+            .filter(e -> !Boolean.TRUE.equals(e.getRecurring())).map(Expense::getAmount)
+            .reduce(BigDecimal.ZERO,BigDecimal::add);
     }
 
     public BigDecimal getTotalExpenses(Integer year, Integer month) {
@@ -202,6 +221,7 @@ public class ExpenseService {
         dto.setExpenseMonth(e.getExpenseMonth());
         dto.setRecurring(e.getRecurring());
         dto.setDescription(e.getDescription());
+        dto.setAdChannel(e.getAdChannel());
         return dto;
     }
 }

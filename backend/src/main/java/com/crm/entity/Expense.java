@@ -36,6 +36,7 @@ public class Expense {
     private Boolean recurring; // Daimi xərc
 
     private String description;
+    private String adChannel;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

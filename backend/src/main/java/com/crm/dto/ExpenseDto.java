@@ -28,4 +28,5 @@ public class ExpenseDto {
     private Boolean recurring;
 
     private String description;
+    private String adChannel;
 }
