@@ -4,6 +4,10 @@ import com.crm.dto.StudentDto;
 import com.crm.entity.Student;
 import com.crm.enums.StudentStatus;
 import com.crm.repository.StudentRepository;
+import com.crm.repository.PaymentRepository;
+import com.crm.repository.GroupStudentRepository;
+import com.crm.repository.StudentFreezePeriodRepository;
+import java.time.ZoneId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +21,11 @@ import java.util.stream.Collectors;
 public class StudentService {
 
     private final StudentRepository studentRepository;
+    private final PaymentRepository payments;
+    private final GroupStudentRepository memberships;
+    private final StudentFreezePeriodRepository frozenMonths;
+    private final StudentFreezeService freezes;
+    private final ChangeAuditService audit;
 
     public List<StudentDto> getAll() {
         return studentRepository.findAll().stream()
@@ -76,7 +85,10 @@ public class StudentService {
             .archived(false)
             .build();
 
-        return toDto(studentRepository.save(student));
+        StudentDto created = toDto(studentRepository.save(student));
+        if (created.getStatus() == StudentStatus.DONDURULUB) freezeCurrentMonth(created.getId());
+        audit.record("CREATE","STUDENT",created.getId(),null,created);
+        return created;
     }
 
     @Transactional
@@ -84,6 +96,7 @@ public class StudentService {
         Student student = studentRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Tələbə tapılmadı"));
 
+        StudentDto before = toDto(student);
         student.setFirstName(dto.getFirstName());
         student.setLastName(dto.getLastName());
         String fin = normalizeFin(dto.getFin());
@@ -103,20 +116,38 @@ public class StudentService {
         student.setExitReason(dto.getStatus() == StudentStatus.AYRILIB ? dto.getExitReason() : null);
         student.setArchived(dto.isArchived());
 
-        return toDto(studentRepository.save(student));
+        StudentDto changed = toDto(studentRepository.save(student));
+        if (changed.getStatus() == StudentStatus.DONDURULUB &&
+            before.getStatus() != StudentStatus.DONDURULUB) freezeCurrentMonth(id);
+        audit.record("UPDATE","STUDENT",id,before,changed);
+        return changed;
     }
 
     @Transactional
     public void archive(Long id) {
         Student student = studentRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Tələbə tapılmadı"));
+        StudentDto before = toDto(student);
         student.setArchived(true);
-        studentRepository.save(student);
+        StudentDto changed = toDto(studentRepository.save(student));
+        audit.record("ARCHIVE","STUDENT",id,before,changed);
     }
 
     @Transactional
     public void delete(Long id) {
-        studentRepository.deleteById(id);
+        Student student = studentRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Tələbə tapılmadı"));
+        if (!payments.findByStudentId(id).isEmpty() || !memberships.findByStudentId(id).isEmpty())
+            throw new IllegalArgumentException("Tarixçəsi olan tələbə silinmir; arxivləşdirin");
+        StudentDto before = toDto(student);
+        studentRepository.delete(student);
+        audit.record("DELETE","STUDENT",id,before,null);
+    }
+
+    private void freezeCurrentMonth(Long studentId) {
+        LocalDate now = LocalDate.now(ZoneId.of("Asia/Baku"));
+        if (!frozenMonths.existsByStudentIdAndYearAndMonth(studentId,now.getYear(),now.getMonthValue()))
+            freezes.freeze(studentId,now.getYear(),now.getMonthValue());
     }
 
     private static String normalizeFin(String raw) {

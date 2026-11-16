@@ -22,6 +22,7 @@ import java.util.Map;
 public class ManagerController {
     private final UserRepository users;
     private final PasswordEncoder encoder;
+    private final com.crm.service.ChangeAuditService audit;
 
     @GetMapping
     @Transactional(readOnly = true)
@@ -44,7 +45,9 @@ public class ManagerController {
             .role(Role.MANAGER)
             .active(true)
             .build();
-        return ResponseEntity.ok(dto(users.save(user)));
+        ManagerDto created=dto(users.save(user));
+        audit.record("CREATE","MANAGER",created.getId(),null,created);
+        return ResponseEntity.ok(created);
     }
 
     @PutMapping("/{id}/active")
@@ -52,8 +55,11 @@ public class ManagerController {
     public ManagerDto setActive(@PathVariable Long id, @RequestParam boolean active) {
         User user = users.findById(id).orElseThrow(() -> new IllegalArgumentException("Menecer tapılmadı"));
         if (user.getRole() != Role.MANAGER) throw new IllegalArgumentException("Menecer tapılmadı");
+        ManagerDto before=dto(user);
         user.setActive(active);
-        return dto(users.save(user));
+        ManagerDto updated=dto(users.save(user));
+        audit.record("UPDATE","MANAGER",id,before,updated);
+        return updated;
     }
 
     private ManagerDto dto(User user) {

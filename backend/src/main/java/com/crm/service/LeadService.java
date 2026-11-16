@@ -21,6 +21,7 @@ public class LeadService {
     private final LeadRepository leads;
     private final UserRepository users;
     private final StudentService studentService;
+    private final ChangeAuditService audit;
 
     @Transactional(readOnly = true)
     public List<LeadDto> all() {
@@ -36,24 +37,34 @@ public class LeadService {
     public LeadDto create(LeadDto data) {
         Lead lead = new Lead();
         apply(lead, data, actor());
-        return dto(leads.save(lead));
+        LeadDto created = dto(leads.save(lead));
+        audit.record("CREATE","LEAD",created.getId(),null,created);
+        return created;
     }
 
     @Transactional
     public LeadDto update(Long id, LeadDto data) {
         Lead lead = find(id);
+        LeadDto before = dto(lead);
         apply(lead, data, actor());
-        return dto(leads.save(lead));
+        LeadDto changed = dto(leads.save(lead));
+        audit.record("UPDATE","LEAD",id,before,changed);
+        return changed;
     }
 
     @Transactional
     public void delete(Long id) {
-        leads.delete(find(id));
+        Lead lead = find(id);
+        LeadDto before = dto(lead);
+        leads.delete(lead);
+        audit.record("DELETE","LEAD",id,before,null);
     }
 
     @Transactional
     public Long convert(Long leadId) {
-        Lead lead = find(leadId);
+        Lead lead = leads.lockById(leadId)
+            .orElseThrow(()->new IllegalArgumentException("Lead tapılmadı"));
+        LeadDto before = dto(lead);
         if (lead.getConvertedStudent()!=null)
             throw new IllegalArgumentException("Lead artıq tələbə kimi qeydiyyatdan keçib");
         String name = lead.getFullName().trim();
@@ -70,6 +81,7 @@ public class LeadService {
         lead.setLostReason(null);
         lead.setConvertedStudent(student);
         leads.save(lead);
+        audit.record("CONVERT","LEAD",leadId,before,dto(lead));
         return created.getId();
     }
 

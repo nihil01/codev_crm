@@ -15,6 +15,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CourseController {
     private final CourseRepository courses;
+    private final com.crm.service.ChangeAuditService audit;
     public record CourseRequest(@NotBlank String name, String description) {}
     public record CourseResponse(Long id, String name, String description) {}
 
@@ -33,6 +34,8 @@ public class CourseController {
             throw new IllegalArgumentException("Bu kurs artıq mövcuddur");
         Course c = Course.builder().name(name).description(request.description()).active(true).build();
         c = courses.save(c);
-        return new CourseResponse(c.getId(),c.getName(),c.getDescription());
+        CourseResponse created=new CourseResponse(c.getId(),c.getName(),c.getDescription());
+        audit.record("CREATE","COURSE",created.id(),null,created);
+        return created;
     }
 }
