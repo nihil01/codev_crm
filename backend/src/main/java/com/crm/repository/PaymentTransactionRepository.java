@@ -10,6 +10,7 @@ import java.util.List;
 
 public interface PaymentTransactionRepository extends JpaRepository<PaymentTransaction, Long> {
     List<PaymentTransaction> findByPaymentIdOrderByPaidAtDesc(Long paymentId);
+    java.util.Optional<PaymentTransaction> findByPaymentIdAndIdempotencyKey(Long paymentId, String idempotencyKey);
 
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM PaymentTransaction t WHERE t.payment.id = :paymentId")
     BigDecimal sumForInvoice(@Param("paymentId") Long paymentId);
