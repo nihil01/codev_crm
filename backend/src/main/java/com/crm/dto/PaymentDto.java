@@ -45,6 +45,7 @@ public class PaymentDto {
     private String note;
 
     // Read-only
+    private String studentPhone;
     private String studentFirstName;
     private String studentLastName;
     private String groupNumber;

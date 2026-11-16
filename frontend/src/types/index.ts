@@ -16,6 +16,7 @@ export enum PaymentStatus {
   GOZLENILIR = 'GOZLENILIR',
   GECIKIB = 'GECIKIB',
   BAGISLANIB = 'BAGISLANIB',
+  DONDURULUB = 'DONDURULUB',
 }
 
 export enum PaymentMethod {
@@ -149,7 +150,14 @@ export interface Payment {
   paymentMonth: number;
   amount: number;
   paymentDate?: string;
+  dueDate?: string;
   paymentMethod?: PaymentMethod;
+  paidAmount?: number;
+  remainingAmount?: number;
+  discountAmount?: number;
+  discountReason?: string;
+  frozen?: boolean;
+  studentPhone?: string;
   status: PaymentStatus;
   note?: string;
   studentFirstName: string;

@@ -123,11 +123,16 @@ public class PaymentController {
             .filter(p -> p.getDueDate() != null && !p.getDueDate().isAfter(now)
                 && p.getRemainingAmount().signum() > 0
                 && !p.isFrozen() && p.getStatus() != PaymentStatus.DONDURULUB)
-            .map(p -> Map.<String,Object>of(
-                "paymentId", p.getId(), "student", p.getStudentFirstName()+" "+p.getStudentLastName(),
-                "dueDate", p.getDueDate(), "remaining", p.getRemainingAmount(),
-                "message", "Salam! Codev üzrə "+p.getRemainingAmount()+" AZN ödəniş qalığınız var. Zəhmət olmasa ödənişi yoxlayın."
-            )).toList());
+            .map(p -> {
+                Map<String,Object> item = new java.util.LinkedHashMap<>();
+                item.put("paymentId",p.getId());
+                item.put("student",p.getStudentFirstName()+" "+p.getStudentLastName());
+                item.put("phone",p.getStudentPhone());
+                item.put("dueDate",p.getDueDate());
+                item.put("remaining",p.getRemainingAmount());
+                item.put("message","Salam! Codev üzrə "+p.getRemainingAmount()+" AZN ödəniş qalığınız var. Zəhmət olmasa ödənişi yoxlayın.");
+                return item;
+            }).toList());
     }
 
     @PostMapping("/mark-overdue")

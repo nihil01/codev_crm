@@ -4,7 +4,6 @@ import com.crm.dto.PaymentDto;
 import com.crm.entity.*;
 import com.crm.enums.PaymentMethod;
 import com.crm.enums.PaymentStatus;
-import com.crm.enums.StudentStatus;
 import com.crm.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -70,8 +69,7 @@ public class PaymentService {
         if (amount == null || amount.signum() <= 0 || amount.scale() > 2)
             throw new IllegalArgumentException("Ödəniş məbləği düzgün deyil");
         if (method == null) throw new IllegalArgumentException("Ödəniş üsulu tələb olunur");
-        if (p.isFrozen() || p.getStatus() == PaymentStatus.BAGISLANIB ||
-            p.getStudent().getStatus() == StudentStatus.DONDURULUB)
+        if (p.isFrozen() || p.getStatus() == PaymentStatus.BAGISLANIB)
             throw new IllegalArgumentException("Dondurulmuş/bağışlanmış ödənişi qəbul etmək olmaz");
         BigDecimal rest = remaining(p);
         if (amount.compareTo(rest) > 0) throw new IllegalArgumentException("Ödəniş qalıq borcdan çoxdur");
@@ -169,6 +167,7 @@ public class PaymentService {
         dto.setPaidAmount(paid); dto.setRemainingAmount(remaining(p));
         dto.setStatus(p.isFrozen() ? PaymentStatus.DONDURULUB : dto.getRemainingAmount().signum() == 0
             ? PaymentStatus.ODENILIB : overdue(p) ? PaymentStatus.GECIKIB : PaymentStatus.GOZLENILIR);
+        dto.setStudentPhone(p.getStudent().getPhone());
         dto.setStudentFirstName(p.getStudent().getFirstName()); dto.setStudentLastName(p.getStudent().getLastName());
         dto.setGroupNumber(p.getGroup().getGroupNumber());
         return dto;
