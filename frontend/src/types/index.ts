@@ -85,6 +85,7 @@ export interface Student {
   fin: string;
   email: string;
   phone?: string;
+  reminderConsent?: boolean;
   birthDate?: string;
   source?: LeadSource;
   parentName?: string;

@@ -7,7 +7,7 @@ import { useThemeClasses } from '../lib/theme';
 import { Plus, Search, Edit2, Trash2, Archive, ArchiveRestore, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const emptyStudent: Partial<Student> = { firstName: '', lastName: '', fin: '', email: '', phone: '', birthDate: '', status: 'AKTIV', parentName: '', parentPhone: '', address: '', note: '', source: 'INSTAGRAM', exitReason: '' };
+const emptyStudent: Partial<Student> = { firstName: '', lastName: '', fin: '', email: '', phone: '', birthDate: '', status: 'AKTIV', parentName: '', parentPhone: '', address: '', note: '', source: 'INSTAGRAM', exitReason: '', reminderConsent: false };
 
 export const Students: React.FC = () => {
   const t = useThemeClasses();
@@ -132,6 +132,11 @@ export const Students: React.FC = () => {
                   <div><label className={`block text-sm mb-1 ${t.label}`}>Doğum tarixi</label><input type="date" value={form.birthDate || ''} onChange={(e) => setForm({ ...form, birthDate: e.target.value })} className={inputCls} /></div>
                   <div><label className={`block text-sm mb-1 ${t.label}`}>E-poçt</label><input type="email" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputCls} /></div>
                   <div><label className={`block text-sm mb-1 ${t.label}`}>Telefon</label><input type="text" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputCls} /></div>
+                  <label className="flex gap-2 items-center">
+                    <input type="checkbox" checked={!!form.reminderConsent}
+                      onChange={e=>setForm({...form,reminderConsent:e.target.checked})}/>
+                    <span className={t.label}>Ödəniş xatırlatmaları üçün mesaj göndərilməsinə razılıq</span>
+                  </label>
                   <div><label className={`block text-sm mb-1 ${t.label}`}>Mənbə</label><select value={form.source || ''} onChange={e=>setForm({...form,source:e.target.value as Student['source']})} className={inputCls}><option value="">Seçin</option><option value="INSTAGRAM">Instagram</option><option value="WHATSAPP">WhatsApp</option><option value="TIKTOK">TikTok</option><option value="ZENG">Zəng</option><option value="TOVSIYE">Tövsiyə</option><option value="SAYT">Sayt</option><option value="BIRBASA_GELIS">Birbaşa gəliş</option></select></div>
                   <div><label className={`block text-sm mb-1 ${t.label}`}>Valideyn adı</label><input className={inputCls} value={form.parentName || ''} onChange={e=>setForm({...form,parentName:e.target.value})}/></div>
                   <div><label className={`block text-sm mb-1 ${t.label}`}>Valideyn telefonu</label><input className={inputCls} value={form.parentPhone || ''} onChange={e=>setForm({...form,parentPhone:e.target.value})}/></div>

@@ -24,6 +24,7 @@ public class StudentDto {
     private String email;
 
     private String phone;
+    private boolean reminderConsent;
 
     private LocalDate birthDate;
 
