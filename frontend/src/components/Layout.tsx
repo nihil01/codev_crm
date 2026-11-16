@@ -25,12 +25,14 @@ import {
   MessageSquareText,
   ChartNoAxesCombined,
   Target,
+  CalendarOff,
 } from 'lucide-react';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/leads', label: 'Leadlər', icon: ClipboardList },
   { path: '/reminders', label: 'Xatırlatmalar', icon: MessageSquareText },
+  { path: '/freezes', label: 'Dondurulmuş aylar', icon: CalendarOff },
   { path: '/students', label: 'Tələbələr', icon: Users },
   { path: '/teachers', label: 'Müəllimlər', icon: GraduationCap },
   { path: '/groups', label: 'Qruplar', icon: Layers },

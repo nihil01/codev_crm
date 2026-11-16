@@ -22,6 +22,7 @@ import { Audit } from './pages/Audit';
 import { Reminders } from './pages/Reminders';
 import { ScenarioForecast } from './pages/ScenarioForecast';
 import { Analytics } from './pages/Analytics';
+import { StudentFreezes } from './pages/StudentFreezes';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -63,6 +64,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/audit" element={<ProtectedRoute adminOnly><Audit /></ProtectedRoute>} />
       <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
       <Route path="/reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
+      <Route path="/freezes" element={<ProtectedRoute><StudentFreezes /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
