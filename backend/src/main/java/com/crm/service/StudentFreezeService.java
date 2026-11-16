@@ -87,7 +87,10 @@ public class StudentFreezeService {
         if(student.getStatus()==com.crm.enums.StudentStatus.DONDURULUB &&
             current.getYear()==year && current.getMonthValue()==month)
             throw new IllegalArgumentException("Cari ayı açmaq üçün əvvəl tələbənin statusunu Aktiv edin");
-        periods.deleteAndFlush(period);
+
+        periods.delete(period);
+        periods.flush();
+
         for(Payment p:invoices.findByStudentId(studentId))
             if(p.getPaymentYear()==year && p.getPaymentMonth()==month)
                 payments.freeze(p.getId(),false);
