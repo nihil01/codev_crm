@@ -31,6 +31,11 @@ public class GroupStudent {
     @Column(nullable = false)
     private LocalDate joinDate;
 
+    // Exit from this group without destroying payment history or other enrollments.
+    private LocalDate leftAt;
+    @Column(columnDefinition = "TEXT")
+    private String exitReason;
+
     private String note;
 
     @CreationTimestamp

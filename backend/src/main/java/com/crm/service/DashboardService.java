@@ -14,6 +14,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import com.crm.entity.GroupStudent;
 import java.util.stream.Collectors;
 
 @Service
@@ -66,7 +67,10 @@ public class DashboardService {
             DashboardDto.GroupSummaryDto gs = new DashboardDto.GroupSummaryDto();
             gs.setGroupId(group.getId());
             gs.setGroupNumber(group.getGroupNumber());
-            gs.setStudentCount((long) group.getGroupStudents().size());
+            gs.setStudentCount(group.getGroupStudents().stream()
+                .filter(m->m.getLeftAt()==null && !m.getStudent().isArchived() &&
+                    m.getStudent().getStatus()==StudentStatus.AKTIV)
+                .count());
             gs.setCollected(courseGroupService.calculateGroupCollected(group.getId(), year, month));
             gs.setTeacherShare(courseGroupService.calculateTeacherSalary(group.getId(), year, month));
             gs.setNetProfit(gs.getCollected().subtract(gs.getTeacherShare()));

@@ -26,4 +26,8 @@ public class GroupStudentDto {
     private String studentFirstName;
     private String studentLastName;
     private String studentFin;
+    private LocalDate leftAt;
+    private String exitReason;
+    private boolean studentArchived;
+    private String studentStatus;
 }

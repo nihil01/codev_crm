@@ -27,7 +27,7 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     List<Student> findByStatus(StudentStatus status);
 
     @Query("SELECT COUNT(DISTINCT gs.student.id) FROM GroupStudent gs " +
-           "WHERE gs.student.archived = false AND gs.student.status = :studentStatus " +
+           "WHERE gs.leftAt IS NULL AND gs.student.archived = false AND gs.student.status = :studentStatus " +
            "AND gs.group.status IN :groupStatuses")
     long countInActiveGroups(@Param("studentStatus") StudentStatus studentStatus,
                              @Param("groupStatuses") List<GroupStatus> groupStatuses);

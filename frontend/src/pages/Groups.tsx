@@ -55,6 +55,7 @@ export const Groups: React.FC = () => {
   const deleteMutation = useMutation({
     mutationFn: groupsApi.delete,
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['groups'] }); toast.success('Qrup silindi'); setSelectedGroup(null); },
+    onError: (error: any) => toast.error(error?.response?.data?.message || 'Qrup silinmədi'),
   });
   const completeMutation = useMutation({ mutationFn: groupsApi.complete, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['groups'] }); toast.success('Qrup tamamlandı'); } });
   const suspendMutation = useMutation({ mutationFn: groupsApi.suspend, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['groups'] }); toast.success('Qrup dayandırıldı'); } });
@@ -75,11 +76,33 @@ export const Groups: React.FC = () => {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['group-students'] }); toast.success('Tələbə əlavə edildi'); setShowAddStudent(false); setAddStudentForm({ studentId: 0, monthlyAmount: 0, joinDate: '' }); },
     onError: (err: any) => toast.error(err.response?.data?.message || 'Xəta'),
   });
+  const errorMessage = (error: any) =>
+    error?.response?.data?.message ||
+    Object.values(error?.response?.data?.errors || {}).join('; ') ||
+    'Əməliyyat yerinə yetirilmədi';
+
   const removeStudentMutation = useMutation({
-    mutationFn: ({ groupId, studentId }: { groupId: number; studentId: number }) => groupsApi.removeStudent(groupId, studentId),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['group-students'] }); toast.success('Tələbə çıxarıldı'); },
+    mutationFn: ({ groupId, studentId, reason }: { groupId: number; studentId: number; reason: string }) =>
+      groupsApi.removeStudent(groupId, studentId, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['group-students'] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      toast.success('Tələbə qrupdan çıxarıldı; maliyyə tarixçəsi saxlanıldı');
+    },
+    onError: (error: any) => toast.error(errorMessage(error), { duration: 6500 }),
   });
 
+  const removeStudentFromGroup = (studentId: number) => {
+    if(!selectedGroup) return;
+    const reason = window.prompt('Tələbənin qrupdan ayrılma səbəbi:');
+    if(!reason?.trim()) return;
+    removeStudentMutation.mutate({groupId:selectedGroup,studentId,reason:reason.trim()});
+  };
+  const activeMembers = groupStudents.filter(gs =>
+    !gs.leftAt && !gs.studentArchived && gs.studentStatus === 'AKTIV');
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [addStudentForm, setAddStudentForm] = useState({ studentId: 0, monthlyAmount: 0, joinDate: '' });
 
@@ -154,17 +177,25 @@ export const Groups: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Students */}
             <div>
-              <h3 className={`flex items-center gap-2 text-sm font-medium mb-3 transition-colors duration-300 ${t.muted}`}><Users size={16} /> Tələbələr ({groupStudents.length})</h3>
+              <h3 className={`flex items-center gap-2 text-sm font-medium mb-3 transition-colors duration-300 ${t.muted}`}><Users size={16} /> Tələbələr ({activeMembers.length} aktiv / {groupStudents.length} ümumi)</h3>
               <div className="space-y-2">
                 {groupStudents.map((gs) => (
                   <div key={gs.id} className={`flex items-center justify-between p-3 rounded-lg transition-colors duration-300 ${t.itemBg}`}>
                     <div>
                       <p className={`text-sm font-medium transition-colors duration-300 ${t.title}`}>{gs.studentFirstName} {gs.studentLastName}</p>
-                      <p className={`text-xs font-mono transition-colors duration-300 ${t.muted}`}>{gs.studentFin}</p>
+                      <p className={`text-xs font-mono transition-colors duration-300 ${t.muted}`}>{gs.studentFin || 'FİN yoxdur'}</p>
+                      {(gs.leftAt || gs.studentArchived || gs.studentStatus !== 'AKTIV') &&
+                        <p className="text-xs text-amber-500">
+                          {gs.leftAt ? `Ayrılıb: ${gs.leftAt}` : gs.studentArchived ? 'Arxiv' : gs.studentStatus}
+                        </p>}
                     </div>
                     <div className="flex items-center gap-2">
                       <p className="text-sm text-emerald-400 font-medium">{gs.monthlyAmount} AZN/ay</p>
-                      <button onClick={() => removeStudentMutation.mutate({ groupId: selectedGroup, studentId: gs.studentId })} className={`p-1 rounded transition-colors ${t.iconBtnDanger}`} title="Çıxar"><Trash2 size={12} /></button>
+                      {!gs.leftAt &&
+                        <button onClick={() => removeStudentFromGroup(gs.studentId)}
+                          disabled={removeStudentMutation.isPending}
+                          className={`p-1 rounded transition-colors ${t.iconBtnDanger}`}
+                          title="Qrupdan çıxar"><Trash2 size={12} /></button>}
                     </div>
                   </div>
                 ))}

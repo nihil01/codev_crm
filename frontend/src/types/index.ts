@@ -127,6 +127,10 @@ export interface CourseGroup {
 }
 
 export interface GroupStudent {
+  leftAt?: string | null;
+  exitReason?: string | null;
+  studentArchived?: boolean;
+  studentStatus?: string;
   id: number;
   studentId: number;
   monthlyAmount: number;

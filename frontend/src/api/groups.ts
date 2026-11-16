@@ -44,8 +44,8 @@ export const groupsApi = {
     const { data } = await api.post(`/groups/${groupId}/students`, student);
     return data;
   },
-  removeStudent: async (groupId: number, studentId: number): Promise<void> => {
-    await api.delete(`/groups/${groupId}/students/${studentId}`);
+  removeStudent: async (groupId: number, studentId: number, reason: string): Promise<void> => {
+    await api.delete(`/groups/${groupId}/students/${studentId}`, { params: { reason } });
   },
 
   // Teachers in group
