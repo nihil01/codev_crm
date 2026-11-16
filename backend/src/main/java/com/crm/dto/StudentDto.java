@@ -34,6 +34,7 @@ public class StudentDto {
     private String note;
     private StudentStatus status;
     private String exitReason;
+    private LocalDate exitDate;
 
     private Long groupId;
 

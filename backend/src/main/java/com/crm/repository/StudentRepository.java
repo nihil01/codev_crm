@@ -24,6 +24,7 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     List<Student> findByArchived(boolean archived);
 
     long countByArchived(boolean archived);
+    List<Student> findByStatus(StudentStatus status);
 
     @Query("SELECT COUNT(DISTINCT gs.student.id) FROM GroupStudent gs " +
            "WHERE gs.student.archived = false AND gs.student.status = :studentStatus " +

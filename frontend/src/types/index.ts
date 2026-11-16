@@ -92,6 +92,7 @@ export interface Student {
   note?: string;
   status?: StudentStatus;
   exitReason?: string;
+  exitDate?: string;
   groupId?: number;
   registrationDate: string;
   archived: boolean;
