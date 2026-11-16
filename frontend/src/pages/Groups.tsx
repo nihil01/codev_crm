@@ -22,6 +22,8 @@ const statusLabels: Record<string, string> = { AKTIV: 'Başlayıb', BASLAYIB: 'B
 export const Groups: React.FC = () => {
   const t = useThemeClasses();
   const [showModal, setShowModal] = useState(false);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [editing, setEditing] = useState<CourseGroup | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<number | null>(null);
   const emptyForm = { groupNumber: '', startDate: '', durationMonths: 6, courseId: 0, lessonDays: '', lessonTime: '', trainingMode: 'EYANI' as 'EYANI'|'ONLAYN', room:'', maxStudents: 20, status: 'TOPLANIR' as CourseGroup['status'] };
@@ -121,6 +123,17 @@ export const Groups: React.FC = () => {
   };
 
   const inputCls = `w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-300 ${t.inputBgModal}`;
+  const matchingGroups = groups.filter(group => {
+    const matchesStatus = statusFilter === 'ALL' || group.status === statusFilter;
+    const needle = search.trim().toLocaleLowerCase('az-AZ');
+    const searchable = [
+      group.groupNumber, group.courseName, group.lessonDays,
+      group.lessonTime, group.room, ...(group.teacherNames || [])
+    ].filter(Boolean).join(' ').toLocaleLowerCase('az-AZ');
+    return matchesStatus && (!needle || searchable.includes(needle));
+  });
+  const dateLabel = (value?: string) =>
+    value ? new Date(value + 'T00:00:00').toLocaleDateString('az-AZ') : '—';
 
   return (
     <div className="space-y-6">
@@ -129,110 +142,239 @@ export const Groups: React.FC = () => {
         <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg"><Plus size={18} /> Yeni Qrup</button>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-8"><div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {groups.map((group, i) => (
-            <motion.div key={group.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-              onClick={() => setSelectedGroup(group.id)}
-              className={`${t.cardBg} border rounded-xl p-5 cursor-pointer transition-all hover:border-indigo-500/50 ${selectedGroup === group.id ? 'border-indigo-500 ring-1 ring-indigo-500/30' : ''} duration-300`}>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className={`text-lg font-semibold transition-colors duration-300 ${t.title}`}>{group.groupNumber}</h3>
-                <span className={`px-2 py-1 rounded text-xs ${statusColors[group.status]}`}>{statusLabels[group.status]}</span>
-              </div>
-              <div className={`text-sm space-y-1 transition-colors duration-300 ${t.muted}`}>
-                <p>Başlama: {new Date(group.startDate).toLocaleDateString('az-AZ')}</p>
-                <p>Müddət: {group.durationMonths} ay</p>
-                <p>Kurs: {group.courseName || 'Təyin edilməyib'}</p>
-                <p>{group.lessonDays || '—'} {group.lessonTime || ''} · {group.trainingMode === 'ONLAYN' ? 'Onlayn' : 'Əyani'}</p>
-                {group.endDate && <p>Bitmə: {new Date(group.endDate).toLocaleDateString('az-AZ')}</p>}
-              </div>
-              <div className="flex gap-2 mt-3">
-                <button onClick={(e) => { e.stopPropagation(); openEdit(group); }} className={`p-1 rounded transition-colors ${t.iconBtn}`} title="Redaktə"><Edit2 size={14} /></button>
-                {(group.status === 'AKTIV' || group.status === 'BASLAYIB') && (
-                  <>
-                    <button onClick={(e) => { e.stopPropagation(); completeMutation.mutate(group.id); }} className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1"><CheckCircle size={14} /> Tamamla</button>
-                    <button onClick={(e) => { e.stopPropagation(); suspendMutation.mutate(group.id); }} className="text-xs text-yellow-400 hover:text-yellow-300 flex items-center gap-1"><PauseCircle size={14} /> Dayandır</button>
-                  </>
-                )}
-                {group.status === 'DAYANDIRILMIS' && (
-                  <button onClick={(e) => { e.stopPropagation(); resumeMutation.mutate(group.id); }} className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1"><PlayCircle size={14} /> Bərpa Et</button>
-                )}
-                <button onClick={(e) => { e.stopPropagation(); if (confirm('Silmək istəyirsiniz?')) deleteMutation.mutate(group.id); }} className={`p-1 rounded transition-colors ${t.iconBtnDanger}`} title="Sil"><Trash2 size={14} /></button>
-              </div>
-            </motion.div>
-          ))}
+      {/* Group list: one sortable/filterable tabular overview, not cards. */}
+      <div className={`rounded-xl border p-4 space-y-4 ${t.cardBg}`}>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex-1 min-w-[220px]">
+            <span className={`block text-xs mb-1 ${t.muted}`}>Qrup, kurs, müəllim və ya otaq axtar</span>
+            <input type="search" value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Axtar..." className={`w-full px-3 py-2 rounded-lg border ${t.inputBg}`} />
+          </label>
+          <label className="min-w-[165px]">
+            <span className={`block text-xs mb-1 ${t.muted}`}>Status</span>
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+              className={`w-full px-3 py-2 rounded-lg border ${t.inputBg}`}>
+              <option value="ALL">Bütün qruplar</option>
+              {Object.entries(statusLabels).map(([key, label]) =>
+                <option key={key} value={key}>{label}</option>)}
+            </select>
+          </label>
+          <div className={`text-xs self-end pb-2 ${t.muted}`}>
+            {matchingGroups.length} / {groups.length} qrup
+          </div>
         </div>
-      )}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1380px] text-sm text-left">
+            <thead className={t.thClass}>
+              <tr>
+                {['Qrup', 'Kurs', 'Başlama', 'Bitmə', 'Müddət', 'Dərs günləri / saat',
+                  'Format', 'Otaq', 'Tələbələr / limit', 'Müəllimlər', 'Status', 'Əməliyyatlar']
+                  .map(label => <th key={label} scope="col"
+                    className="px-3 py-3 font-semibold whitespace-nowrap">{label}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading && <tr><td colSpan={12} className={`px-3 py-8 text-center ${t.muted}`}>Yüklənir...</td></tr>}
+              {!isLoading && matchingGroups.length === 0 &&
+                <tr><td colSpan={12} className={`px-3 py-8 text-center ${t.muted}`}>Qrup tapılmadı</td></tr>}
+              {!isLoading && matchingGroups.map(group => (
+                <tr key={group.id}
+                  onClick={() => setSelectedGroup(id => id === group.id ? null : group.id)}
+                  tabIndex={0}
+                  onKeyDown={event => {
+                    if (event.target === event.currentTarget &&
+                        (event.key === 'Enter' || event.key === ' ')) {
+                      event.preventDefault();
+                      setSelectedGroup(id => id === group.id ? null : group.id);
+                    }
+                  }}
+                  aria-selected={selectedGroup === group.id}
+                  className={`border-b ${t.rowBorder} ${t.rowHover} cursor-pointer transition-colors
+                    ${selectedGroup === group.id ? 'bg-indigo-500/10 ring-1 ring-inset ring-indigo-500/40' : ''}`}>
+                  <td className={`px-3 py-3 font-semibold whitespace-nowrap ${t.title}`}>
+                    {group.groupNumber}
+                  </td>
+                  <td className="px-3 py-3 max-w-[200px]">{group.courseName || '—'}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">{dateLabel(group.startDate)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">{dateLabel(group.endDate)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">{group.durationMonths} ay</td>
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    {group.lessonDays || '—'} {group.lessonTime || ''}
+                  </td>
+                  <td className="px-3 py-3">{group.trainingMode === 'ONLAYN' ? 'Onlayn'
+                    : group.trainingMode === 'EYANI' ? 'Əyani' : '—'}</td>
+                  <td className="px-3 py-3">{group.room || '—'}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    <span className="font-semibold">{group.activeStudentCount ?? '—'}</span>
+                    <span className={t.muted}> / {group.maxStudents ?? '∞'}</span>
+                  </td>
+                  <td className="px-3 py-3 min-w-[170px]">
+                    {group.teacherNames?.length ? group.teacherNames.join(', ') : '—'}
+                  </td>
+                  <td className="px-3 py-3">
+                    <span className={`inline-block rounded px-2 py-1 text-xs whitespace-nowrap ${statusColors[group.status]}`}>
+                      {statusLabels[group.status] || group.status}
+                    </span>
+                  </td>
+                  <td className="px-3 py-3">
+                    <div className="flex items-center gap-2 whitespace-nowrap">
+                      <button onClick={e => { e.stopPropagation(); openEdit(group); }}
+                        className={`p-1.5 rounded ${t.iconBtn}`} title="Redaktə"
+                        aria-label={`${group.groupNumber} redaktə et`}><Edit2 size={16} /></button>
+                      {(group.status === 'AKTIV' || group.status === 'BASLAYIB') && <>
+                        <button onClick={e => { e.stopPropagation(); completeMutation.mutate(group.id); }}
+                          className="p-1.5 rounded text-emerald-400" title="Tamamla"
+                          aria-label={`${group.groupNumber} tamamla`}><CheckCircle size={16} /></button>
+                        <button onClick={e => { e.stopPropagation(); suspendMutation.mutate(group.id); }}
+                          className="p-1.5 rounded text-yellow-400" title="Dayandır"
+                          aria-label={`${group.groupNumber} dayandır`}><PauseCircle size={16} /></button>
+                      </>}
+                      {group.status === 'DAYANDIRILMIS' &&
+                        <button onClick={e => { e.stopPropagation(); resumeMutation.mutate(group.id); }}
+                          className="p-1.5 rounded text-emerald-400" title="Bərpa et"
+                          aria-label={`${group.groupNumber} bərpa et`}><PlayCircle size={16} /></button>}
+                      <button onClick={e => { e.stopPropagation();
+                          if (window.confirm(`${group.groupNumber} qrupunu silmək istəyirsiniz?`))
+                            deleteMutation.mutate(group.id);
+                        }} className={`p-1.5 rounded ${t.iconBtnDanger}`} title="Sil"
+                        aria-label={`${group.groupNumber} sil`}><Trash2 size={16} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className={`text-xs ${t.muted}`}>
+          Qrupa toxunaraq tələbə və müəllim cədvəllərini açın. Tarixi qeydiyyatlar saxlanılır,
+          lakin aktiv tələbə sayına daxil edilmir.
+        </p>
+      </div>
 
-      {/* Selected Group Details */}
+      {/* Preserve the full management workflow in table-based details. */}
       {selectedGroup && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`${t.cardBg} border rounded-xl p-5 transition-colors duration-300`}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className={`text-lg font-semibold transition-colors duration-300 ${t.title}`}>Qrup Detalları - {groups.find(g => g.id === selectedGroup)?.groupNumber}</h2>
-            <button onClick={() => setShowAddStudent(true)} className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg"><Plus size={16} /> Tələbə Əlavə Et</button>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+          className={`${t.cardBg} border rounded-xl p-5 space-y-5`}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className={`text-lg font-semibold ${t.title}`}>
+              Qrup Detalları — {groups.find(g => g.id === selectedGroup)?.groupNumber}
+            </h2>
+            <div className="flex gap-2">
+              <button onClick={() => setShowAddStudent(true)}
+                className="flex items-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg">
+                <Plus size={16} /> Tələbə əlavə et
+              </button>
+              <button onClick={() => setSelectedGroup(null)} className={`p-2 rounded ${t.iconBtn}`}
+                title="Bağla" aria-label="Qrup detallarını bağla"><X size={18} /></button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Students */}
-            <div>
-              <h3 className={`flex items-center gap-2 text-sm font-medium mb-3 transition-colors duration-300 ${t.muted}`}><Users size={16} /> Tələbələr ({activeMembers.length} aktiv / {groupStudents.length} ümumi)</h3>
-              <div className="space-y-2">
-                {groupStudents.map((gs) => (
-                  <div key={gs.id} className={`flex items-center justify-between p-3 rounded-lg transition-colors duration-300 ${t.itemBg}`}>
-                    <div>
-                      <p className={`text-sm font-medium transition-colors duration-300 ${t.title}`}>{gs.studentFirstName} {gs.studentLastName}</p>
-                      <p className={`text-xs font-mono transition-colors duration-300 ${t.muted}`}>{gs.studentFin || 'FİN yoxdur'}</p>
-                      {(gs.leftAt || gs.studentArchived || gs.studentStatus !== 'AKTIV') &&
-                        <p className="text-xs text-amber-500">
-                          {gs.leftAt ? `Ayrılıb: ${gs.leftAt}` : gs.studentArchived ? 'Arxiv' : gs.studentStatus}
-                        </p>}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm text-emerald-400 font-medium">{gs.monthlyAmount} AZN/ay</p>
-                      {!gs.leftAt &&
-                        <button onClick={() => removeStudentFromGroup(gs.studentId)}
+          <section className="space-y-3">
+            <h3 className={`flex items-center gap-2 text-sm font-semibold ${t.title}`}>
+              <Users size={17} /> Tələbələr ({activeMembers.length} aktiv / {groupStudents.length} ümumi)
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[800px] text-sm text-left">
+                <thead className={t.thClass}><tr>
+                  {['Ad və soyad', 'FİN', 'Qeydiyyat tarixi', 'Aylıq ödəniş', 'Status', 'Çıxma səbəbi', 'Əməliyyat']
+                    .map(label => <th key={label} className="px-3 py-2">{label}</th>)}
+                </tr></thead>
+                <tbody>
+                  {groupStudents.length === 0 &&
+                    <tr><td colSpan={7} className={`p-4 text-center ${t.muted}`}>Tələbə yoxdur</td></tr>}
+                  {groupStudents.map(gs => (
+                    <tr key={gs.id} className={`border-b ${t.rowBorder}`}>
+                      <td className={`px-3 py-3 font-medium ${t.title}`}>
+                        {gs.studentFirstName} {gs.studentLastName}
+                      </td>
+                      <td className="px-3 py-3 font-mono">{gs.studentFin || '—'}</td>
+                      <td className="px-3 py-3 whitespace-nowrap">{dateLabel(gs.joinDate)}</td>
+                      <td className="px-3 py-3 whitespace-nowrap text-emerald-400">{gs.monthlyAmount} AZN/ay</td>
+                      <td className="px-3 py-3">
+                        {gs.leftAt ? `Ayrılıb: ${dateLabel(gs.leftAt)}`
+                          : gs.studentArchived ? 'Arxiv' : gs.studentStatus || '—'}
+                      </td>
+                      <td className="px-3 py-3">{gs.exitReason || '—'}</td>
+                      <td className="px-3 py-3">
+                        {!gs.leftAt && <button onClick={() => removeStudentFromGroup(gs.studentId)}
                           disabled={removeStudentMutation.isPending}
-                          className={`p-1 rounded transition-colors ${t.iconBtnDanger}`}
-                          title="Qrupdan çıxar"><Trash2 size={12} /></button>}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                          className={`p-1.5 rounded ${t.iconBtnDanger}`} title="Qrupdan çıxar">
+                          <Trash2 size={15} />
+                        </button>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <h3 className={`flex items-center gap-2 text-sm font-semibold ${t.title}`}>
+              <GraduationCap size={17} /> Müəllimlər ({groupTeachers.length})
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-sm text-left">
+                <thead className={t.thClass}><tr>
+                  {['Ad və soyad', 'Müəllim payı', 'Başlanğıc', 'Bitmə', 'Bu ay hesablanan', 'Əməliyyat']
+                    .map(label => <th key={label} className="px-3 py-2">{label}</th>)}
+                </tr></thead>
+                <tbody>
+                  {groupTeachers.length === 0 &&
+                    <tr><td colSpan={6} className={`p-4 text-center ${t.muted}`}>Müəllim yoxdur</td></tr>}
+                  {groupTeachers.map(gt => (
+                    <tr key={gt.id} className={`border-b ${t.rowBorder}`}>
+                      <td className={`px-3 py-3 font-medium ${t.title}`}>
+                        {gt.teacherFirstName} {gt.teacherLastName}
+                      </td>
+                      <td className="px-3 py-3 text-orange-400">%{gt.salaryPercentage}</td>
+                      <td className="px-3 py-3">{gt.effectiveMonth}/{gt.effectiveYear}</td>
+                      <td className="px-3 py-3">{gt.effectiveUntilYear
+                        ? `${gt.effectiveUntilMonth}/${gt.effectiveUntilYear}` : 'Davam edir'}</td>
+                      <td className="px-3 py-3 text-emerald-400">
+                        {(gt.calculatedSalary || 0).toLocaleString('az-AZ')} AZN
+                      </td>
+                      <td className="px-3 py-3">
+                        {!gt.effectiveUntilYear && <button
+                          onClick={() => removeTeacherMutation.mutate({
+                            groupId: selectedGroup, teacherId: gt.teacherId
+                          })}
+                          disabled={removeTeacherMutation.isPending}
+                          className={`p-1.5 rounded ${t.iconBtnDanger}`} title="Müəllimi çıxar">
+                          <Trash2 size={15} />
+                        </button>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
-            {/* Teachers */}
-            <div>
-              <h3 className={`flex items-center gap-2 text-sm font-medium mb-3 transition-colors duration-300 ${t.muted}`}><GraduationCap size={16} /> Müəllimlər</h3>
-              <div className="space-y-2">
-                {groupTeachers.map((gt) => (
-                  <div key={gt.id} className={`flex items-center justify-between p-3 rounded-lg transition-colors duration-300 ${t.itemBg}`}>
-                    <div>
-                      <p className={`text-sm font-medium transition-colors duration-300 ${t.title}`}>{gt.teacherFirstName} {gt.teacherLastName}</p>
-                      <p className={`text-xs transition-colors duration-300 ${t.muted}`}>Effektiv: {gt.effectiveMonth}/{gt.effectiveYear}{gt.effectiveUntilMonth ? ' — '+gt.effectiveUntilMonth+'/'+gt.effectiveUntilYear : ''}</p>
-                      <p className="text-xs text-emerald-500">Bu ay hesablanan: {gt.calculatedSalary||0} AZN</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm text-orange-400 font-medium">%{gt.salaryPercentage}</p>
-                      {!gt.effectiveUntilYear&&<button onClick={() => removeTeacherMutation.mutate({ groupId: selectedGroup, teacherId: gt.teacherId })} className={`p-1 rounded transition-colors ${t.iconBtnDanger}`} title="Çıxar"><Trash2 size={12} /></button>}
-                    </div>
-                  </div>
-                ))}
-                {/* Assign teacher form */}
-                <div className={`p-3 rounded-lg border border-dashed transition-colors duration-300 ${t.border}`}>
-                  <div className="grid grid-cols-2 gap-2 mb-2">
-                    <select value={teacherForm.teacherId} onChange={(e) => setTeacherForm({ ...teacherForm, teacherId: +e.target.value })} className={`${inputCls} text-xs`}>
-                      <option value={0}>Müəllim seç...</option>
-                      {teachers.map((te) => <option key={te.id} value={te.id}>{te.firstName} {te.lastName}</option>)}
-                    </select>
-                    <input type="number" value={teacherForm.salaryPercentage} onChange={(e) => setTeacherForm({ ...teacherForm, salaryPercentage: +e.target.value })} placeholder="Faiz %" className={`${inputCls} text-xs`} min={1} max={100} />
-                  </div>
-                  <button onClick={() => { if (teacherForm.teacherId) assignTeacherMutation.mutate({ groupId: selectedGroup, data: teacherForm }); }} disabled={!teacherForm.teacherId} className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded-lg disabled:opacity-50">Müəllim Təyin Et</button>
-                </div>
+            <div className={`p-3 rounded-lg border border-dashed ${t.border}`}>
+              <h4 className={`text-sm font-medium mb-3 ${t.title}`}>Müəllim təyin et</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <select value={teacherForm.teacherId}
+                  onChange={e => setTeacherForm({ ...teacherForm, teacherId: +e.target.value })}
+                  className={`${inputCls} text-sm`}>
+                  <option value={0}>Müəllim seç...</option>
+                  {teachers.map(te => <option key={te.id} value={te.id}>
+                    {te.firstName} {te.lastName}</option>)}
+                </select>
+                <input type="number" min={1} max={100} step={0.01}
+                  value={teacherForm.salaryPercentage}
+                  onChange={e => setTeacherForm({ ...teacherForm, salaryPercentage: +e.target.value })}
+                  placeholder="Faiz %" className={`${inputCls} text-sm`} />
+                <button onClick={() => {
+                    if (teacherForm.teacherId)
+                      assignTeacherMutation.mutate({ groupId: selectedGroup, data: teacherForm });
+                  }}
+                  disabled={!teacherForm.teacherId || assignTeacherMutation.isPending}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg px-3 py-2 disabled:opacity-50">
+                  Müəllim təyin et
+                </button>
               </div>
             </div>
-          </div>
+          </section>
         </motion.div>
       )}
 
