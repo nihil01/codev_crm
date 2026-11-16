@@ -28,6 +28,7 @@ public class CourseGroupService {
     private final TeacherRepository teacherRepository;
     private final PaymentRepository paymentRepository;
     private final PaymentService paymentService;
+    private final CourseRepository courseRepository;
 
     public List<CourseGroupDto> getAll() {
         return groupRepository.findAll().stream()
@@ -36,7 +37,7 @@ public class CourseGroupService {
     }
 
     public List<CourseGroupDto> getActive() {
-        return groupRepository.findByStatus(GroupStatus.AKTIV).stream()
+        return groupRepository.findByStatusIn(List.of(GroupStatus.AKTIV,GroupStatus.BASLAYIB)).stream()
             .map(this::toDto)
             .collect(Collectors.toList());
     }
@@ -53,9 +54,10 @@ public class CourseGroupService {
             .groupNumber(dto.getGroupNumber())
             .startDate(dto.getStartDate())
             .durationMonths(dto.getDurationMonths())
-            .status(GroupStatus.AKTIV)
+            .status(dto.getStatus() == null ? GroupStatus.TOPLANIR : dto.getStatus())
             .build();
 
+        applyGroupMetadata(group,dto);
         group.calculateEndDate();
         return toDto(groupRepository.save(group));
     }
@@ -71,6 +73,7 @@ public class CourseGroupService {
         if (dto.getStatus() != null) {
             group.setStatus(dto.getStatus());
         }
+        applyGroupMetadata(group,dto);
         group.calculateEndDate();
 
         return toDto(groupRepository.save(group));
@@ -99,7 +102,7 @@ public class CourseGroupService {
         if (group.getStatus() != GroupStatus.DAYANDIRILMIS) {
             throw new RuntimeException("Yalnız dayandırılmış qrupları bərpa etmək olar");
         }
-        group.setStatus(GroupStatus.AKTIV);
+        group.setStatus(GroupStatus.BASLAYIB);
         groupRepository.save(group);
     }
 
@@ -117,6 +120,9 @@ public class CourseGroupService {
             .orElseThrow(() -> new RuntimeException("Qrup tapılmadı"));
         Student student = studentRepository.findById(dto.getStudentId())
             .orElseThrow(() -> new RuntimeException("Tələbə tapılmadı"));
+
+        if (group.getMaxStudents()!=null && groupStudentRepository.findByGroupId(groupId).size()>=group.getMaxStudents())
+            throw new IllegalArgumentException("Qrupun maksimum tələbə sayı dolub");
 
         if (groupStudentRepository.findByGroupIdAndStudentId(groupId, dto.getStudentId()).isPresent()) {
             throw new RuntimeException("Bu tələbə artıq bu qrupdadır");
@@ -232,6 +238,22 @@ public class CourseGroupService {
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
+    private void applyGroupMetadata(CourseGroup group, CourseGroupDto dto) {
+        if (dto.getCourseId() != null) {
+            Course course = courseRepository.findById(dto.getCourseId())
+                .orElseThrow(() -> new IllegalArgumentException("Kurs tapılmadı"));
+            group.setCourse(course);
+        }
+        group.setLessonDays(dto.getLessonDays());
+        group.setLessonTime(dto.getLessonTime());
+        group.setTrainingMode(dto.getTrainingMode());
+        group.setRoom(dto.getRoom());
+        group.setMaxStudents(dto.getMaxStudents());
+        if(group.getMaxStudents()!=null &&
+           group.getMaxStudents()<groupStudentRepository.findByGroupId(group.getId()==null?-1L:group.getId()).size())
+            throw new IllegalArgumentException("Maksimum tələbə sayı mövcud iştirakçılardan az ola bilməz");
+    }
+
     private CourseGroupDto toDto(CourseGroup g) {
         CourseGroupDto dto = new CourseGroupDto();
         dto.setId(g.getId());
@@ -240,6 +262,13 @@ public class CourseGroupService {
         dto.setDurationMonths(g.getDurationMonths());
         dto.setEndDate(g.getEndDate());
         dto.setStatus(g.getStatus());
+        dto.setCourseId(g.getCourse()==null?null:g.getCourse().getId());
+        dto.setCourseName(g.getCourse()==null?null:g.getCourse().getName());
+        dto.setLessonDays(g.getLessonDays());
+        dto.setLessonTime(g.getLessonTime());
+        dto.setTrainingMode(g.getTrainingMode());
+        dto.setRoom(g.getRoom());
+        dto.setMaxStudents(g.getMaxStudents());
         return dto;
     }
 

@@ -73,7 +73,7 @@ public class ReportService {
     }
 
     private BigDecimal calculateExpected(Integer year, Integer month) {
-        List<CourseGroup> activeGroups = groupRepository.findByStatus(GroupStatus.AKTIV);
+        List<CourseGroup> activeGroups = groupRepository.findByStatusIn(List.of(GroupStatus.AKTIV,GroupStatus.BASLAYIB));
         BigDecimal total = BigDecimal.ZERO;
 
         for (CourseGroup group : activeGroups) {
@@ -86,7 +86,7 @@ public class ReportService {
     }
 
     private BigDecimal calculateTeacherSalaries(Integer year, Integer month) {
-        List<CourseGroup> activeGroups = groupRepository.findByStatus(GroupStatus.AKTIV);
+        List<CourseGroup> activeGroups = groupRepository.findByStatusIn(List.of(GroupStatus.AKTIV,GroupStatus.BASLAYIB));
         BigDecimal total = BigDecimal.ZERO;
 
         for (CourseGroup group : activeGroups) {

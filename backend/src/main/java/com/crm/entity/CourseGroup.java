@@ -1,6 +1,7 @@
 package com.crm.entity;
 
 import com.crm.enums.GroupStatus;
+import com.crm.enums.TrainingMode;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -30,6 +31,19 @@ public class CourseGroup {
     private Integer durationMonths;
 
     private LocalDate endDate;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="course_id")
+    private Course course;
+
+    @Column(name="lesson_days")
+    private String lessonDays;
+    @Column(name="lesson_time")
+    private String lessonTime;
+    @Enumerated(EnumType.STRING)
+    private TrainingMode trainingMode;
+    private String room;
+    private Integer maxStudents;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

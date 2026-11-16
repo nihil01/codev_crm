@@ -5,6 +5,8 @@ export enum Role {
 
 export enum GroupStatus {
   AKTIV = 'AKTIV',
+  BASLAYIB = 'BASLAYIB',
+  TOPLANIR = 'TOPLANIR',
   TAMAMLANMIS = 'TAMAMLANMIS',
   DAYANDIRILMIS = 'DAYANDIRILMIS',
 }
@@ -107,6 +109,13 @@ export interface CourseGroup {
   durationMonths: number;
   endDate: string;
   status: GroupStatus;
+  courseId?: number;
+  courseName?: string;
+  lessonDays?: string;
+  lessonTime?: string;
+  trainingMode?: 'EYANI'|'ONLAYN';
+  room?: string;
+  maxStudents?: number;
 }
 
 export interface GroupStudent {

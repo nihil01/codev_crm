@@ -4,6 +4,7 @@ import com.crm.dto.DashboardDto;
 import com.crm.dto.PaymentDto;
 import com.crm.entity.CourseGroup;
 import com.crm.enums.GroupStatus;
+import com.crm.enums.StudentStatus;
 import com.crm.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -34,9 +35,9 @@ public class DashboardService {
         int month = now.getMonthValue();
 
         dashboard.setTotalStudents(studentRepository.count());
-        dashboard.setActiveStudents(studentRepository.countByArchived(false));
+        dashboard.setActiveStudents(studentRepository.countInActiveGroups(StudentStatus.AKTIV, List.of(GroupStatus.AKTIV,GroupStatus.BASLAYIB)));
         dashboard.setTotalTeachers((long) teacherRepository.count());
-        dashboard.setActiveGroups(groupRepository.countByStatus(GroupStatus.AKTIV));
+        dashboard.setActiveGroups(groupRepository.countByStatusIn(List.of(GroupStatus.AKTIV,GroupStatus.BASLAYIB)));
 
         BigDecimal collected = paymentService.getCollectedForMonth(year, month);
         dashboard.setCurrentMonthCollected(collected);
@@ -51,7 +52,7 @@ public class DashboardService {
             dashboard.setCollectionRate(BigDecimal.ZERO);
         }
 
-        dashboard.setOverdueCount(paymentRepository.countOverduePayments(year, month));
+        dashboard.setOverdueCount((long) paymentService.getOverdue(year, month).size());
 
         // Recent payments (only from active groups)
         List<PaymentDto> recentPayments = paymentService.getByPeriod(year, month).stream()
@@ -61,7 +62,7 @@ public class DashboardService {
 
         // Group summaries
         List<DashboardDto.GroupSummaryDto> summaries = new ArrayList<>();
-        for (CourseGroup group : groupRepository.findByStatus(GroupStatus.AKTIV)) {
+        for (CourseGroup group : groupRepository.findByStatusIn(List.of(GroupStatus.AKTIV,GroupStatus.BASLAYIB))) {
             DashboardDto.GroupSummaryDto gs = new DashboardDto.GroupSummaryDto();
             gs.setGroupId(group.getId());
             gs.setGroupNumber(group.getGroupNumber());
