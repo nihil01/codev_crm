@@ -62,21 +62,23 @@ export const Dashboard: React.FC = () => {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className={`${cardBg} border rounded-xl p-5 transition-colors duration-300`}>
           <div className="flex items-center gap-2 mb-2">
             <ArrowUpRight size={18} className="text-emerald-400" />
-            <span className={`text-sm ${mutedText}`}>Toplanmış</span>
+            <span className={`text-sm ${mutedText}`}>Bu ay faktiki mədaxil (kassa)</span>
           </div>
           <p className="text-3xl font-bold text-emerald-400">{data.currentMonthCollected?.toLocaleString()} AZN</p>
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className={`${cardBg} border rounded-xl p-5 transition-colors duration-300`}>
           <div className="flex items-center gap-2 mb-2">
             <ArrowDownRight size={18} className="text-blue-400" />
-            <span className={`text-sm ${mutedText}`}>Gözlənilən</span>
+            <span className={`text-sm ${mutedText}`}>Bu ay üzrə hesablanıb</span>
           </div>
           <p className="text-3xl font-bold text-blue-400">{data.currentMonthExpected?.toLocaleString()} AZN</p>
+          <p className={`text-xs mt-2 ${mutedText}`}>Bu ayın hesablarına ödənilib: {data.currentMonthPaidAgainstExpected?.toLocaleString()} AZN</p>
+          <p className={`text-xs ${mutedText}`}>Ödənilməmiş qalıq: {data.currentMonthOutstanding?.toLocaleString()} AZN</p>
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className={`${cardBg} border rounded-xl p-5 transition-colors duration-300`}>
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp size={18} className="text-indigo-400" />
-            <span className={`text-sm ${mutedText}`}>Toplama Faizi</span>
+            <span className={`text-sm ${mutedText}`}>Bu ayın hesabları üzrə ödəniş faizi</span>
           </div>
           <p className="text-3xl font-bold text-indigo-400">{data.collectionRate?.toFixed(1)}%</p>
           <div className={`mt-2 w-full rounded-full h-2 ${progressBg} transition-colors duration-300`}>
@@ -117,7 +119,7 @@ export const Dashboard: React.FC = () => {
 
       {data.recentPayments && data.recentPayments.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }} className={`${cardBg} border rounded-xl p-5 transition-colors duration-300`}>
-          <h2 className={`text-lg font-semibold mb-4 transition-colors duration-300 ${titleColor}`}>Son Ödənişlər</h2>
+          <h2 className={`text-lg font-semibold mb-4 transition-colors duration-300 ${titleColor}`}>Bu Ayın Hesabları (mədaxil əməliyyatları deyil)</h2>
           <div className="space-y-2">
             {data.recentPayments.slice(0, 5).map((p) => (
               <div key={p.id} className={`flex items-center justify-between p-3 rounded-lg transition-colors duration-300 ${itemBg}`}>

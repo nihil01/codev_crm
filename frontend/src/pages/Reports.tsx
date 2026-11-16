@@ -77,18 +77,21 @@ export function Reports() {
           {/* Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`${t.cardBg} border ${t.border} rounded-xl p-5`}>
-              <div className="flex items-center gap-2 mb-2"><DollarSign size={18} className="text-emerald-400" /><span className={`text-sm ${t.muted}`}>Toplanmış</span></div>
+              <div className="flex items-center gap-2 mb-2"><DollarSign size={18} className="text-emerald-400" /><span className={`text-sm ${t.muted}`}>Bu ay faktiki kassaya daxil olub</span></div>
               <p className="text-2xl font-bold text-emerald-400">{report.totalCollected?.toLocaleString()} AZN</p>
-              <p className={`text-xs mt-1 ${t.muted}`}>Gözlənilən: {report.totalExpected?.toLocaleString()} AZN</p>
+              <p className={`text-xs mt-1 ${t.muted}`}>Bu ay hesablanıb: {report.totalExpected?.toLocaleString()} AZN</p>
+              <p className={`text-xs ${t.muted}`}>Bu ayın hesablarına ödənilib: {report.paidAgainstExpected?.toLocaleString()} AZN</p>
+              <p className={`text-xs ${t.muted}`}>Həmin hesabların qalığı: {report.outstandingForPeriod?.toLocaleString()} AZN</p>
             </motion.div>
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className={`${t.cardBg} border ${t.border} rounded-xl p-5`}>
-              <div className="flex items-center gap-2 mb-2"><TrendingUp size={18} className="text-indigo-400" /><span className={`text-sm ${t.muted}`}>Toplama Faizi</span></div>
+              <div className="flex items-center gap-2 mb-2"><TrendingUp size={18} className="text-indigo-400" /><span className={`text-sm ${t.muted}`}>Bu ayın hesabları üzrə ödənilmə faizi</span></div>
               <p className="text-2xl font-bold text-indigo-400">{report.collectionRate?.toFixed(1)}%</p>
               <div className={`mt-2 w-full rounded-full h-2 ${t.progressBg}`}><div className="h-2 bg-indigo-500 rounded-full" style={{ width: `${Math.min(report.collectionRate || 0, 100)}%` }} /></div>
             </motion.div>
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className={`${t.cardBg} border ${t.border} rounded-xl p-5`}>
               <div className="flex items-center gap-2 mb-2"><AlertTriangle size={18} className="text-red-400" /><span className={`text-sm ${t.muted}`}>Gecikmiş</span></div>
-              <p className="text-2xl font-bold text-red-400">{report.overduePayments?.length || 0}</p>
+              <p className="text-2xl font-bold text-red-400">{report.totalOverdueCount || 0}</p>
+              <p className={`text-xs mt-1 ${t.muted}`}>Bütün aylardan gecikmiş borc: {report.totalOverdueDebt?.toLocaleString()} AZN</p>
             </motion.div>
           </div>
 
@@ -135,7 +138,7 @@ export function Reports() {
                       <p className={`text-sm font-medium ${t.title}`}>{p.studentFirstName} {p.studentLastName}</p>
                       <p className={`text-xs ${t.muted}`}>{p.groupNumber} - {MN[p.paymentMonth]} {p.paymentYear}</p>
                     </div>
-                    <p className="text-sm font-medium text-red-400">{p.amount.toLocaleString()} AZN</p>
+                    <p className="text-sm font-medium text-red-400">{(p.remainingAmount||0).toLocaleString()} AZN</p>
                   </div>
                 ))}
               </div>
