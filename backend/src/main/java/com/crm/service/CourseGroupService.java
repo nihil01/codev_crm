@@ -230,10 +230,16 @@ public class CourseGroupService {
         if(dto.getSalaryPercentage()==null || dto.getSalaryPercentage().signum()<=0 ||
            dto.getSalaryPercentage().compareTo(BigDecimal.valueOf(100))>0)
             throw new IllegalArgumentException("Müəllim payı 0–100% arasında olmalıdır");
-        List<GroupTeacher> existing=groupTeacherRepository.findByGroupId(groupId);
-        if(existing.stream().anyMatch(x->x.getTeacher().getId().equals(dto.getTeacherId())))
-            throw new IllegalArgumentException("Müəllim artıq bu qrupa təyin olunub");
-        BigDecimal total=existing.stream().map(GroupTeacher::getSalaryPercentage)
+        java.time.YearMonth begin=java.time.YearMonth.of(
+            dto.getEffectiveYear()==null?LocalDate.now().getYear():dto.getEffectiveYear(),
+            dto.getEffectiveMonth()==null?LocalDate.now().getMonthValue():dto.getEffectiveMonth());
+        List<GroupTeacher> overlapping=groupTeacherRepository.findByGroupId(groupId).stream()
+            .filter(gt->gt.getEffectiveUntilYear()==null ||
+                java.time.YearMonth.of(gt.getEffectiveUntilYear(),gt.getEffectiveUntilMonth()).isAfter(begin))
+            .toList();
+        if(overlapping.stream().anyMatch(x->x.getTeacher().getId().equals(dto.getTeacherId())))
+            throw new IllegalArgumentException("Müəllim bu tarix aralığında artıq təyin olunub");
+        BigDecimal total=overlapping.stream().map(GroupTeacher::getSalaryPercentage)
             .reduce(BigDecimal.ZERO,BigDecimal::add).add(dto.getSalaryPercentage());
         if(total.compareTo(BigDecimal.valueOf(100))>0)
             throw new IllegalArgumentException("Qrup müəllim paylarının cəmi 100%-i keçə bilməz");
@@ -257,11 +263,20 @@ public class CourseGroupService {
         GroupTeacher selected=gts.stream()
             .filter(gt -> gt.getTeacher().getId().equals(teacherId))
             .findFirst().orElseThrow(()->new IllegalArgumentException("Müəllim qrupa təyin olunmayıb"));
-        if(shareAllocations.existsByGroupTeacherId(selected.getId()))
-            throw new IllegalArgumentException("Müəllimə pay hesablanıb; bu təyinat silinmir");
+        if(selected.getEffectiveUntilYear()!=null)
+            throw new IllegalArgumentException("Bu müəllim təyinatı artıq bağlanıb");
         GroupTeacherDto before=toGroupTeacherDto(selected);
-        groupTeacherRepository.delete(selected);
-        audit.record("REMOVE","GROUP_TEACHER",selected.getId(),before,null);
+        if(shareAllocations.existsByGroupTeacherId(selected.getId())) {
+            // End the assignment without deleting accruals already earned.
+            java.time.YearMonth today=java.time.YearMonth.now(java.time.ZoneId.of("Asia/Baku"));
+            selected.setEffectiveUntilYear(today.getYear());
+            selected.setEffectiveUntilMonth(today.getMonthValue());
+            groupTeacherRepository.save(selected);
+            audit.record("END_ASSIGNMENT","GROUP_TEACHER",selected.getId(),before,toGroupTeacherDto(selected));
+        } else {
+            groupTeacherRepository.delete(selected);
+            audit.record("REMOVE","GROUP_TEACHER",selected.getId(),before,null);
+        }
     }
 
     // === Payment Schedule ===
@@ -374,6 +389,8 @@ public class CourseGroupService {
         dto.setSalaryStatus(gt.getSalaryStatus());
         dto.setEffectiveMonth(gt.getEffectiveMonth());
         dto.setEffectiveYear(gt.getEffectiveYear());
+        dto.setEffectiveUntilYear(gt.getEffectiveUntilYear());
+        dto.setEffectiveUntilMonth(gt.getEffectiveUntilMonth());
         dto.setTeacherFirstName(gt.getTeacher().getFirstName());
         dto.setTeacherLastName(gt.getTeacher().getLastName());
         return dto;

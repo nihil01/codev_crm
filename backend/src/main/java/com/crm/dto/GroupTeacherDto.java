@@ -24,6 +24,8 @@ public class GroupTeacherDto {
 
     private Integer effectiveMonth;
     private Integer effectiveYear;
+    private Integer effectiveUntilMonth;
+    private Integer effectiveUntilYear;
 
     // Read-only
     private String teacherFirstName;

@@ -142,6 +142,8 @@ export interface GroupTeacher {
   salaryStatus?: string;
   effectiveMonth: number;
   effectiveYear: number;
+  effectiveUntilMonth?: number;
+  effectiveUntilYear?: number;
   teacherFirstName: string;
   teacherLastName: string;
 }

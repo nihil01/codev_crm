@@ -39,6 +39,9 @@ public class GroupTeacher {
     @Column(nullable = false)
     private Integer effectiveYear;
 
+    private Integer effectiveUntilMonth;
+    private Integer effectiveUntilYear;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

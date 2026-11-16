@@ -109,6 +109,9 @@ public class PaymentService {
             YearMonth since=YearMonth.of(assignment.getEffectiveYear(),assignment.getEffectiveMonth());
             YearMonth paid=YearMonth.from(transaction.getPaidAt());
             if(since.isAfter(paid)) continue;
+            if (assignment.getEffectiveUntilYear()!=null &&
+                !paid.isBefore(YearMonth.of(assignment.getEffectiveUntilYear(),assignment.getEffectiveUntilMonth())))
+                continue;
             BigDecimal share=amount.multiply(assignment.getSalaryPercentage())
                 .divide(BigDecimal.valueOf(100),2,RoundingMode.HALF_UP);
             if(share.signum()<=0) continue;
