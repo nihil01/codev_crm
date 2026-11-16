@@ -27,7 +27,11 @@ public class BusinessAnalyticsService {
 
     public Map<String,Object> summary(int year,int month) {
         YearMonth period=YearMonth.of(year,month);
-        List<Lead> allLeads=leads.findAll();
+        List<Lead> allLeads=leads.findAll().stream()
+            .filter(l->l.getCreatedAt()!=null && YearMonth.from(l.getCreatedAt()).equals(period))
+            .toList();
+        List<Expense> monthlyExpenses=expenses.findByExpenseYearAndExpenseMonth(year,month)
+            .stream().filter(e->!e.isCancelled()).toList();
         List<Student> enrolled=students.findAll().stream()
             .filter(s->s.getRegistrationDate()!=null && YearMonth.from(s.getRegistrationDate()).equals(period)).toList();
 
@@ -36,7 +40,7 @@ public class BusinessAnalyticsService {
             long total=allLeads.stream().filter(l->l.getSource()==source).count();
             long won=allLeads.stream().filter(l->l.getSource()==source&&l.getStage()==LeadStage.QEYDIYYAT).count();
             long registered=enrolled.stream().filter(s->s.getSource()==source).count();
-            BigDecimal spent=expenses.findByExpenseYearAndExpenseMonth(year,month).stream()
+            BigDecimal spent=monthlyExpenses.stream()
                 .filter(e->e.getType()==ExpenseType.REKLAM && e.getAdChannel()!=null &&
                    e.getAdChannel().equalsIgnoreCase(source.name()))
                 .map(Expense::getAmount).reduce(BigDecimal.ZERO,BigDecimal::add);
