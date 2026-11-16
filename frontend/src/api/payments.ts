@@ -30,9 +30,9 @@ export const paymentsApi = {
     const { data } = await api.put(`/payments/${id}/pay?method=${method}`);
     return data;
   },
-  partial: async (id:number, amount:number, method:PaymentMethod):Promise<Payment> =>
+  partial: async (id:number, amount:number, method:PaymentMethod, requestKey:string):Promise<Payment> =>
     (await api.post(`/payments/${id}/partial`,null,{
-      params:{amount,method},headers:{'Idempotency-Key':crypto.randomUUID()}
+      params:{amount,method},headers:{'Idempotency-Key':requestKey}
     })).data,
   discount: async (id:number, amount:number, reason:string):Promise<Payment> =>
     (await api.put(`/payments/${id}/discount`,null,{params:{amount,reason}})).data,

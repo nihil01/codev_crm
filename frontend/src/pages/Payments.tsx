@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { paymentsApi } from '../api/payments';
@@ -30,6 +30,7 @@ export const Payments: React.FC = () => {
   const [payModal, setPayModal] = useState<Payment | null>(null);
   const [payMethod, setPayMethod] = useState<PaymentMethod>(PaymentMethod.NAGD);
   const [payAmount,setPayAmount] = useState(0);
+  const pendingPaymentAttempt = useRef<{fingerprint:string;key:string}|null>(null);
   const [historyId,setHistoryId] = useState<number|null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState({ studentId: 0, groupId: 0, paymentYear: now.getFullYear(), paymentMonth: now.getMonth() + 1, amount: 0, note: '' });
@@ -43,8 +44,18 @@ export const Payments: React.FC = () => {
   });
 
   const recordPaymentMutation = useMutation({
-    mutationFn: ({ id, method, amount }: { id: number; method: PaymentMethod; amount: number }) => paymentsApi.partial(id, amount, method),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['payments'] }); toast.success('Ödəniş qeydə alındı'); setPayModal(null); },
+    mutationFn: ({ id, method, amount }: { id: number; method: PaymentMethod; amount: number }) => {
+      const fingerprint = [id,method,amount.toFixed(2)].join(':');
+      if(pendingPaymentAttempt.current?.fingerprint !== fingerprint) {
+        pendingPaymentAttempt.current = { fingerprint, key: crypto.randomUUID() };
+      }
+      return paymentsApi.partial(id, amount, method, pendingPaymentAttempt.current.key);
+    },
+    onSuccess: () => {
+      pendingPaymentAttempt.current = null;
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      toast.success('Ödəniş qeydə alındı'); setPayModal(null);
+    },
     onError: (err: any) => toast.error(err.response?.data?.message || 'Xəta'),
   });
   const createPaymentMutation = useMutation({
