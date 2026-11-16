@@ -27,6 +27,8 @@ import {
   Target,
   CalendarOff,
   Repeat2,
+  BookOpenCheck,
+  ShieldCheck,
 } from 'lucide-react';
 
 const navItems = [
@@ -35,6 +37,8 @@ const navItems = [
   { path: '/reminders', label: 'Xatırlatmalar', icon: MessageSquareText },
   { path: '/freezes', label: 'Dondurulmuş aylar', icon: CalendarOff },
   { path: '/students', label: 'Tələbələr', icon: Users },
+  { path: '/teacher-portal', label: 'Mənim qruplarım', icon: BookOpenCheck },
+  { path: '/teacher-accounts', label: 'Müəllim hesabları', icon: ShieldCheck },
   { path: '/teachers', label: 'Müəllimlər', icon: GraduationCap },
   { path: '/groups', label: 'Qruplar', icon: Layers },
   { path: '/payments', label: 'Ödənişlər', icon: CreditCard },
@@ -93,7 +97,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </div>
 
         <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-          {navItems.filter((item) => user?.role === 'ADMIN' || !['/', '/expenses', '/reports', '/forecast', '/certificates', '/managers', '/audit', '/forecast/scenarios', '/analytics', '/expense-rules'].includes(item.path)).map((item) => {
+          {navItems.filter((item) =>
+            user?.role === 'TEACHER' ? item.path === '/teacher-portal'
+            : item.path !== '/teacher-portal' &&
+              (user?.role === 'ADMIN' || !['/', '/expenses', '/reports', '/forecast',
+                '/certificates', '/managers', '/audit', '/forecast/scenarios',
+                '/analytics', '/expense-rules', '/teacher-accounts'].includes(item.path))).map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link
@@ -148,7 +157,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 </button>
               </div>
               <nav className="py-4 px-2 space-y-1">
-                {navItems.filter((item) => user?.role === 'ADMIN' || !['/', '/expenses', '/reports', '/forecast', '/certificates', '/managers', '/audit', '/forecast/scenarios', '/analytics', '/expense-rules'].includes(item.path)).map((item) => {
+                {navItems.filter((item) =>
+            user?.role === 'TEACHER' ? item.path === '/teacher-portal'
+            : item.path !== '/teacher-portal' &&
+              (user?.role === 'ADMIN' || !['/', '/expenses', '/reports', '/forecast',
+                '/certificates', '/managers', '/audit', '/forecast/scenarios',
+                '/analytics', '/expense-rules', '/teacher-accounts'].includes(item.path))).map((item) => {
                   const isActive = location.pathname === item.path;
                   return (
                     <Link key={item.path} to={item.path} onClick={() => setMobileOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${isActive ? navActive : `${navText} ${navHover}`}`}>

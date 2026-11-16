@@ -24,6 +24,8 @@ import { ScenarioForecast } from './pages/ScenarioForecast';
 import { Analytics } from './pages/Analytics';
 import { StudentFreezes } from './pages/StudentFreezes';
 import { RecurringRules } from './pages/RecurringRules';
+import { TeacherPortal } from './pages/TeacherPortal';
+import { TeacherAccounts } from './pages/TeacherAccounts';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,9 +36,15 @@ const queryClient = new QueryClient({
   },
 });
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
+const ProtectedRoute: React.FC<{
+  children: React.ReactNode; adminOnly?: boolean; teacherOnly?: boolean
+}> = ({ children, adminOnly, teacherOnly }) => {
   const { isAuthenticated, user } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (teacherOnly && user?.role !== Role.TEACHER)
+    return <Navigate to={user?.role === Role.ADMIN ? "/" : "/students"} replace />;
+  if (!teacherOnly && user?.role === Role.TEACHER)
+    return <Navigate to="/teacher-portal" replace />;
   if (adminOnly && user?.role !== Role.ADMIN) return <Navigate to="/students" replace />;
   return <Layout>{children}</Layout>;
 };
@@ -57,6 +65,8 @@ const AppRoutes: React.FC = () => {
       <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
       <Route path="/expenses" element={<ProtectedRoute adminOnly><Expenses /></ProtectedRoute>} />
       <Route path="/expense-rules" element={<ProtectedRoute adminOnly><RecurringRules /></ProtectedRoute>} />
+      <Route path="/teacher-accounts" element={<ProtectedRoute adminOnly><TeacherAccounts /></ProtectedRoute>} />
+      <Route path="/teacher-portal" element={<ProtectedRoute teacherOnly><TeacherPortal /></ProtectedRoute>} />
       <Route path="/reports" element={<ProtectedRoute adminOnly><Reports /></ProtectedRoute>} />
       <Route path="/forecast" element={<ProtectedRoute adminOnly><Forecast /></ProtectedRoute>} />
       <Route path="/forecast/scenarios" element={<ProtectedRoute adminOnly><ScenarioForecast /></ProtectedRoute>} />
