@@ -15,6 +15,8 @@ import { Expenses } from './pages/Expenses';
 import { Reports } from './pages/Reports';
 import { Certificates } from './pages/Certificates';
 import { Forecast } from './pages/Forecast';
+import { Role } from './types';
+import { Managers } from './pages/Managers';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,9 +27,10 @@ const queryClient = new QueryClient({
   },
 });
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
+  const { isAuthenticated, user } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (adminOnly && user?.role !== Role.ADMIN) return <Navigate to="/students" replace />;
   return <Layout>{children}</Layout>;
 };
 
@@ -40,15 +43,16 @@ const AppRoutes: React.FC = () => {
         path="/login"
         element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
       />
-      <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/" element={<ProtectedRoute adminOnly><Dashboard /></ProtectedRoute>} />
       <Route path="/students" element={<ProtectedRoute><Students /></ProtectedRoute>} />
       <Route path="/teachers" element={<ProtectedRoute><Teachers /></ProtectedRoute>} />
       <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
       <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
-      <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
-      <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-      <Route path="/forecast" element={<ProtectedRoute><Forecast /></ProtectedRoute>} />
-      <Route path="/certificates" element={<ProtectedRoute><Certificates /></ProtectedRoute>} />
+      <Route path="/expenses" element={<ProtectedRoute adminOnly><Expenses /></ProtectedRoute>} />
+      <Route path="/reports" element={<ProtectedRoute adminOnly><Reports /></ProtectedRoute>} />
+      <Route path="/forecast" element={<ProtectedRoute adminOnly><Forecast /></ProtectedRoute>} />
+      <Route path="/certificates" element={<ProtectedRoute adminOnly><Certificates /></ProtectedRoute>} />
+      <Route path="/managers" element={<ProtectedRoute adminOnly><Managers /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

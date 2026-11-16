@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -23,6 +24,7 @@ public class CertificateController {
     private final StudentRepository studentRepository;
 
     @PostMapping("/generate")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<byte[]> generate(@RequestBody Map<String, Object> body) {
         StudentDto studentDto = new StudentDto();
 

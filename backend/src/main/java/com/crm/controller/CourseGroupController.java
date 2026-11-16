@@ -96,6 +96,7 @@ public class CourseGroupController {
 
     // Group Teachers
     @GetMapping("/{id}/teachers")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<GroupTeacherDto>> getGroupTeachers(@PathVariable Long id) {
         return ResponseEntity.ok(courseGroupService.getGroupTeachers(id));
     }

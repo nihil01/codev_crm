@@ -11,9 +11,9 @@ spring:
     name: tedris-crm
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/tedris_crm
-    username: postgres
-    password: postgres
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/tedris_crm}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -39,7 +39,7 @@ spring:
     host: smtp.zoho.com
     port: 587
     username: ${MAIL_USERNAME:info@codev.az}
-    password: ${MAIL_PASSWORD:4Rhm-eec}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -55,6 +55,10 @@ spring:
 app:
   cors:
     allowed-origins: http://localhost:5173,http://localhost:3000,https://crm.codev.academy,https://codev.academy
+
+  bootstrap-admin:
+    email: ${CRM_BOOTSTRAP_ADMIN_EMAIL:}
+    password: ${CRM_BOOTSTRAP_ADMIN_PASSWORD:}
 
 logging:
   level:

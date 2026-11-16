@@ -64,8 +64,13 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/auth/login").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers("/api/admin/**", "/api/audit/**", "/api/dashboard/**",
+                    "/api/expenses/**", "/api/reports/**", "/api/forecast/**",
+                    "/api/certificate/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/payments/collected/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/groups/*/teachers").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider(userRepository))

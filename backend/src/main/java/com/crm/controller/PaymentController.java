@@ -53,13 +53,14 @@ public class PaymentController {
     }
 
     @GetMapping("/collected/year/{year}/month/{month}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BigDecimal> getCollected(
             @PathVariable Integer year, @PathVariable Integer month) {
         return ResponseEntity.ok(paymentService.getCollectedForMonth(year, month));
     }
 
     @PutMapping("/{id}/pay")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<PaymentDto> recordPayment(
             @PathVariable Long id,
             @RequestParam PaymentMethod method) {
