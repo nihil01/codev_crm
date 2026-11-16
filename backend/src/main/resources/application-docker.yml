@@ -31,6 +31,10 @@ app:
     allowed-origins: ${CRM_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost,https://crm.codev.academy}
   billing:
     first-payment-delay-months: ${CRM_FIRST_PAYMENT_DELAY_MONTHS:0}
+  reminders:
+    mode: ${CRM_REMINDERS_MODE:MANUAL}
+    webhook-url: ${CRM_REMINDERS_WEBHOOK_URL:}
+    webhook-token: ${CRM_REMINDERS_WEBHOOK_TOKEN:}
 
 logging:
   level:

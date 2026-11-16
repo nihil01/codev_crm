@@ -58,6 +58,10 @@ app:
 
   billing:
     first-payment-delay-months: ${CRM_FIRST_PAYMENT_DELAY_MONTHS:0}
+  reminders:
+    mode: ${CRM_REMINDERS_MODE:MANUAL}
+    webhook-url: ${CRM_REMINDERS_WEBHOOK_URL:}
+    webhook-token: ${CRM_REMINDERS_WEBHOOK_TOKEN:}
   bootstrap-admin:
     email: ${CRM_BOOTSTRAP_ADMIN_EMAIL:}
     password: ${CRM_BOOTSTRAP_ADMIN_PASSWORD:}
