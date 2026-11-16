@@ -35,6 +35,7 @@ public class StudentService {
 
     public List<StudentDto> getActive() {
         return studentRepository.findByArchived(false).stream()
+            .filter(x->x.getStatus()==StudentStatus.AKTIV)
             .map(this::toDto)
             .collect(Collectors.toList());
     }
@@ -81,6 +82,7 @@ public class StudentService {
             .note(dto.getNote())
             .status(dto.getStatus() == null ? StudentStatus.AKTIV : dto.getStatus())
             .exitReason(dto.getExitReason())
+            .exitDate(dto.getStatus()==StudentStatus.AYRILIB?LocalDate.now(ZoneId.of("Asia/Baku")):null)
             .registrationDate(LocalDate.now())
             .archived(false)
             .build();
@@ -114,6 +116,9 @@ public class StudentService {
         student.setNote(dto.getNote());
         student.setStatus(dto.getStatus() == null ? StudentStatus.AKTIV : dto.getStatus());
         student.setExitReason(dto.getStatus() == StudentStatus.AYRILIB ? dto.getExitReason() : null);
+        if(dto.getStatus() == StudentStatus.AYRILIB && before.getStatus()!=StudentStatus.AYRILIB)
+            student.setExitDate(LocalDate.now(ZoneId.of("Asia/Baku")));
+        else if(dto.getStatus()!=StudentStatus.AYRILIB) student.setExitDate(null);
         student.setArchived(dto.isArchived());
 
         StudentDto changed = toDto(studentRepository.save(student));
@@ -146,8 +151,13 @@ public class StudentService {
 
     private void freezeCurrentMonth(Long studentId) {
         LocalDate now = LocalDate.now(ZoneId.of("Asia/Baku"));
-        if (!frozenMonths.existsByStudentIdAndYearAndMonth(studentId,now.getYear(),now.getMonthValue()))
-            freezes.freeze(studentId,now.getYear(),now.getMonthValue());
+        if (!frozenMonths.existsByStudentIdAndYearAndMonth(studentId,now.getYear(),now.getMonthValue())) {
+            var due = payments.findByStudentId(studentId).stream()
+                .filter(x->x.getPaymentYear()==now.getYear() && x.getPaymentMonth()==now.getMonthValue())
+                .toList();
+            if(due.stream().noneMatch(x->freezes.collectedForInvoice(x.getId()).signum()>0))
+                freezes.freeze(studentId,now.getYear(),now.getMonthValue());
+        }
     }
 
     private static String normalizeFin(String raw) {
@@ -178,6 +188,7 @@ public class StudentService {
         dto.setNote(s.getNote());
         dto.setStatus(s.getStatus());
         dto.setExitReason(s.getExitReason());
+        dto.setExitDate(s.getExitDate());
         dto.setRegistrationDate(s.getRegistrationDate());
         dto.setArchived(s.isArchived());
         if (s.getGroup() != null) {

@@ -32,6 +32,7 @@ public class ExcelReportService {
             section(book,data,"groups","Qruplar",new String[]{"group","collected","teacherShare","afterTeacherShare"});
             section(book,data,"sources","Lead Mənbələri",new String[]{"source","leads","won","registered","advertising","cac"});
             section(book,data,"managers","Menecerlər",new String[]{"manager","leads","registered","conversionPercent"});
+            section(book,data,"teachers","Müəllim payları",new String[]{"teacherId","teacher","group","earned"});
             book.write(out);
             return out.toByteArray();
         }catch(Exception ex){throw new IllegalStateException("Excel hesabatı yaradılmadı",ex);}

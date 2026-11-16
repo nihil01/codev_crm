@@ -19,6 +19,14 @@ public interface TeacherShareAllocationRepository extends JpaRepository<TeacherS
     BigDecimal sumForAssignment(@Param("groupTeacherId") Long groupTeacherId,
         @Param("start") LocalDateTime start,@Param("end") LocalDateTime end);
 
+    @Query("SELECT a.teacher.id, a.teacher.firstName, a.teacher.lastName, " +
+        "a.group.groupNumber, SUM(a.amount) FROM TeacherShareAllocation a " +
+        "WHERE a.paymentTransaction.paidAt>=:start AND a.paymentTransaction.paidAt<:end " +
+        "GROUP BY a.teacher.id,a.teacher.firstName,a.teacher.lastName,a.group.groupNumber " +
+        "ORDER BY a.teacher.lastName,a.group.groupNumber")
+    List<Object[]> totalsByTeacherForPeriod(@Param("start") LocalDateTime start,
+                                             @Param("end") LocalDateTime end);
+
     boolean existsByGroupTeacherId(Long groupTeacherId);
     List<TeacherShareAllocation> findByTeacherId(Long teacherId);
 }

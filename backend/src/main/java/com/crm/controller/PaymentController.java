@@ -86,8 +86,9 @@ public class PaymentController {
     @PostMapping("/{id}/partial")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<PaymentDto> recordPartial(@PathVariable Long id,
-            @RequestParam BigDecimal amount, @RequestParam PaymentMethod method) {
-        return ResponseEntity.ok(paymentService.recordPartial(id, amount, method));
+            @RequestParam BigDecimal amount, @RequestParam PaymentMethod method,
+            @RequestHeader(value="Idempotency-Key",required=false) String requestKey) {
+        return ResponseEntity.ok(paymentService.recordPartial(id, amount, method, requestKey));
     }
 
     @PutMapping("/{id}/discount")

@@ -179,11 +179,12 @@ export const Groups: React.FC = () => {
                   <div key={gt.id} className={`flex items-center justify-between p-3 rounded-lg transition-colors duration-300 ${t.itemBg}`}>
                     <div>
                       <p className={`text-sm font-medium transition-colors duration-300 ${t.title}`}>{gt.teacherFirstName} {gt.teacherLastName}</p>
-                      <p className={`text-xs transition-colors duration-300 ${t.muted}`}>Effektiv: {gt.effectiveMonth}/{gt.effectiveYear}</p>
+                      <p className={`text-xs transition-colors duration-300 ${t.muted}`}>Effektiv: {gt.effectiveMonth}/{gt.effectiveYear}{gt.effectiveUntilMonth ? ' — '+gt.effectiveUntilMonth+'/'+gt.effectiveUntilYear : ''}</p>
+                      <p className="text-xs text-emerald-500">Bu ay hesablanan: {gt.calculatedSalary||0} AZN</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <p className="text-sm text-orange-400 font-medium">%{gt.salaryPercentage}</p>
-                      <button onClick={() => removeTeacherMutation.mutate({ groupId: selectedGroup, teacherId: gt.teacherId })} className={`p-1 rounded transition-colors ${t.iconBtnDanger}`} title="Çıxar"><Trash2 size={12} /></button>
+                      {!gt.effectiveUntilYear&&<button onClick={() => removeTeacherMutation.mutate({ groupId: selectedGroup, teacherId: gt.teacherId })} className={`p-1 rounded transition-colors ${t.iconBtnDanger}`} title="Çıxar"><Trash2 size={12} /></button>}
                     </div>
                   </div>
                 ))}

@@ -66,16 +66,30 @@ public class PaymentService {
         Payment p = invoices.lockById(id).orElseThrow(() -> new IllegalArgumentException("Ödəniş tapılmadı"));
         BigDecimal due = remaining(p);
         if (due.signum() <= 0) throw new IllegalArgumentException("Qalıq borc yoxdur");
-        return acceptLocked(p, due, method);
+        return acceptLocked(p, due, method, null);
     }
 
     @Transactional
-    public PaymentDto recordPartial(Long id, BigDecimal amount, PaymentMethod method) {
+    public PaymentDto recordPartial(Long id, BigDecimal amount, PaymentMethod method, String requestKey) {
         Payment p = invoices.lockById(id).orElseThrow(() -> new IllegalArgumentException("Ödəniş tapılmadı"));
-        return acceptLocked(p, amount, method);
+        if(amount==null || method==null)
+            throw new IllegalArgumentException("Ödəniş məbləği və üsulu tələb olunur");
+        String key = requestKey == null || requestKey.isBlank() ? null : requestKey.trim();
+        if(key != null && (key.length()<12 || key.length()>128 || !key.matches("[A-Za-z0-9_-]+")))
+            throw new IllegalArgumentException("Idempotency-Key 12–128 simvoldan ibarət olmalıdır");
+        if (key != null) {
+            var previous=transactions.findByPaymentIdAndIdempotencyKey(id,key);
+            if(previous.isPresent()) {
+                PaymentTransaction tx=previous.get();
+                if(tx.getAmount().compareTo(amount)!=0 || tx.getMethod()!=method)
+                    throw new IllegalArgumentException("Bu sorğu açarı başqa məbləğ və ya üsulla işlənib");
+                return toDto(p);
+            }
+        }
+        return acceptLocked(p, amount, method, key);
     }
 
-    private PaymentDto acceptLocked(Payment p, BigDecimal amount, PaymentMethod method) {
+    private PaymentDto acceptLocked(Payment p, BigDecimal amount, PaymentMethod method, String key) {
         if (amount == null || amount.signum() <= 0 || amount.scale() > 2)
             throw new IllegalArgumentException("Ödəniş məbləği düzgün deyil");
         if (method == null) throw new IllegalArgumentException("Ödəniş üsulu tələb olunur");
@@ -89,11 +103,15 @@ public class PaymentService {
         String actor = SecurityContextHolder.getContext().getAuthentication().getName();
         PaymentTransaction transaction = transactions.saveAndFlush(PaymentTransaction.builder()
             .payment(p).amount(amount).method(method)
-            .paidAt(LocalDateTime.now(ZoneId.of("Asia/Baku"))).recordedBy(actor).build());
+            .paidAt(LocalDateTime.now(ZoneId.of("Asia/Baku")))
+            .recordedBy(actor).idempotencyKey(key).build());
         for (GroupTeacher assignment : groupTeachers.findByGroupId(p.getGroup().getId())) {
             YearMonth since=YearMonth.of(assignment.getEffectiveYear(),assignment.getEffectiveMonth());
             YearMonth paid=YearMonth.from(transaction.getPaidAt());
             if(since.isAfter(paid)) continue;
+            if (assignment.getEffectiveUntilYear()!=null &&
+                !paid.isBefore(YearMonth.of(assignment.getEffectiveUntilYear(),assignment.getEffectiveUntilMonth())))
+                continue;
             BigDecimal share=amount.multiply(assignment.getSalaryPercentage())
                 .divide(BigDecimal.valueOf(100),2,RoundingMode.HALF_UP);
             if(share.signum()<=0) continue;

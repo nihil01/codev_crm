@@ -92,6 +92,7 @@ export interface Student {
   note?: string;
   status?: StudentStatus;
   exitReason?: string;
+  exitDate?: string;
   groupId?: number;
   registrationDate: string;
   archived: boolean;
@@ -142,6 +143,8 @@ export interface GroupTeacher {
   salaryStatus?: string;
   effectiveMonth: number;
   effectiveYear: number;
+  effectiveUntilMonth?: number;
+  effectiveUntilYear?: number;
   teacherFirstName: string;
   teacherLastName: string;
 }

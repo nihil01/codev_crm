@@ -52,6 +52,7 @@ public class Student {
 
     @Column(columnDefinition = "TEXT")
     private String exitReason;
+    private LocalDate exitDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id")

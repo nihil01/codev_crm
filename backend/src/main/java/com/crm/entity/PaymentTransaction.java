@@ -25,6 +25,8 @@ public class PaymentTransaction {
     private LocalDateTime paidAt;
     @Column(nullable = false)
     private String recordedBy;
+    @Column(length=128)
+    private String idempotencyKey;
     @CreationTimestamp
     private LocalDateTime createdAt;
 }
