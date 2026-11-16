@@ -22,6 +22,11 @@ public class LeadController {
     public LeadDto create(@Valid @RequestBody LeadDto data) { return service.create(data); }
     @PutMapping("/{id}")
     public LeadDto update(@PathVariable Long id, @Valid @RequestBody LeadDto data) { return service.update(id, data); }
+    @PostMapping("/{id}/convert")
+    public java.util.Map<String,Long> convert(@PathVariable Long id) {
+        return java.util.Map.of("studentId",service.convert(id));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {

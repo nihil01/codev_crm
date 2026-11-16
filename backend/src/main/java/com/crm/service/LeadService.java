@@ -2,6 +2,7 @@ package com.crm.service;
 
 import com.crm.dto.LeadDto;
 import com.crm.entity.Lead;
+import com.crm.entity.Student;
 import com.crm.entity.User;
 import com.crm.enums.LeadStage;
 import com.crm.enums.Role;
@@ -19,6 +20,7 @@ import java.util.List;
 public class LeadService {
     private final LeadRepository leads;
     private final UserRepository users;
+    private final StudentService studentService;
 
     @Transactional(readOnly = true)
     public List<LeadDto> all() {
@@ -47,6 +49,28 @@ public class LeadService {
     @Transactional
     public void delete(Long id) {
         leads.delete(find(id));
+    }
+
+    @Transactional
+    public Long convert(Long leadId) {
+        Lead lead = find(leadId);
+        if (lead.getConvertedStudent()!=null)
+            throw new IllegalArgumentException("Lead artıq tələbə kimi qeydiyyatdan keçib");
+        String name = lead.getFullName().trim();
+        String[] parts = name.split("\\s+",2);
+        com.crm.dto.StudentDto dto=new com.crm.dto.StudentDto();
+        dto.setFirstName(parts[0]);
+        dto.setLastName(parts.length==2?parts[1]:"—");
+        dto.setPhone(lead.getPhone());
+        dto.setSource(lead.getSource());
+        dto.setStatus(com.crm.enums.StudentStatus.AKTIV);
+        com.crm.dto.StudentDto created = studentService.create(dto);
+        Student student=studentService.getEntity(created.getId());
+        lead.setStage(LeadStage.QEYDIYYAT);
+        lead.setLostReason(null);
+        lead.setConvertedStudent(student);
+        leads.save(lead);
+        return created.getId();
     }
 
     private Lead find(Long id) {
@@ -101,6 +125,7 @@ public class LeadService {
         result.setSource(lead.getSource());
         result.setStage(lead.getStage());
         result.setAssignedManagerId(lead.getAssignedManager() == null ? null : lead.getAssignedManager().getId());
+        result.setConvertedStudentId(lead.getConvertedStudent()==null?null:lead.getConvertedStudent().getId());
         result.setAssignedManagerName(lead.getAssignedManager() == null ? null : lead.getAssignedManager().getFullName());
         result.setConsultationAt(lead.getConsultationAt());
         result.setLostReason(lead.getLostReason());

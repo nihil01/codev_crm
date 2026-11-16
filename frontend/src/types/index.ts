@@ -68,6 +68,7 @@ export interface Lead {
   source: LeadSource;
   stage: LeadStage;
   assignedManagerId?: number | null;
+  convertedStudentId?: number | null;
   assignedManagerName?: string;
   consultationAt?: string;
   lostReason?: string;

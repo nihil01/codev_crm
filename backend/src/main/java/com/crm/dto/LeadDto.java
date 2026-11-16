@@ -15,6 +15,7 @@ public class LeadDto {
     @NotNull private LeadSource source;
     @NotNull private LeadStage stage;
     private Long assignedManagerId;
+    private Long convertedStudentId;
     private String assignedManagerName;
     private LocalDateTime consultationAt;
     private String lostReason;

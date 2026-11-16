@@ -38,6 +38,11 @@ export const Leads: React.FC = () => {
     onSuccess:()=>{qc.invalidateQueries({queryKey:['leads']});setModal(false);toast.success('Lead yadda saxlanıldı');},
     onError:()=>toast.error('Lead saxlanılmadı')
   });
+  const convert = useMutation({
+    mutationFn:leadsApi.convert,
+    onSuccess:({studentId})=>{qc.invalidateQueries({queryKey:['leads']});qc.invalidateQueries({queryKey:['students']});toast.success(`Tələbə yaradıldı (#${studentId})`);},
+    onError:(e:any)=>toast.error(e.response?.data?.message||'Qeydiyyat uğursuz oldu')
+  });
   const remove = useMutation({
     mutationFn:leadsApi.delete,
     onSuccess:()=>{qc.invalidateQueries({queryKey:['leads']});toast.success('Lead silindi');},
@@ -68,6 +73,8 @@ export const Leads: React.FC = () => {
             {l.assignedManagerName && <p className="text-xs opacity-70">Menecer: {l.assignedManagerName}</p>}
             <div className="mt-3 flex gap-3 text-sm">
               <button onClick={()=>open(l)} className="text-indigo-500">Dəyiş</button>
+              {!l.convertedStudentId&&<button disabled={convert.isPending} onClick={()=>{if(window.confirm('Leaddən tələbə yaratmaq istəyirsiniz?'))convert.mutate(l.id);}} className="text-emerald-500">Qeydiyyata al</button>}
+              {l.convertedStudentId&&<span className="text-xs text-emerald-500">Tələbə #{l.convertedStudentId}</span>}
               {isAdmin&&<button onClick={()=>{if(window.confirm('Leadi silmək istəyirsiniz?'))remove.mutate(l.id);}} className="text-red-500">Sil</button>}
             </div>
           </div>)}</div>

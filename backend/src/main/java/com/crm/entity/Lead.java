@@ -31,6 +31,9 @@ public class Lead {
     @Column(columnDefinition = "TEXT")
     private String lostReason;
     private String interestedCourse;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="converted_student_id",unique=true)
+    private Student convertedStudent;
     @Column(columnDefinition = "TEXT")
     private String note;
     @CreationTimestamp

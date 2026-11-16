@@ -36,6 +36,8 @@ public class StudentService {
             .collect(Collectors.toList());
     }
 
+    public Student getEntity(Long id) { return studentRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Tələbə tapılmadı")); }
+
     public StudentDto getById(Long id) {
         Student student = studentRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Tələbə tapılmadı"));
