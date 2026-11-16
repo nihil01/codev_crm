@@ -8,6 +8,7 @@ import java.util.Optional;
 
 public interface GroupTeacherRepository extends JpaRepository<GroupTeacher, Long> {
     List<GroupTeacher> findByGroupId(Long groupId);
+    List<GroupTeacher> findByTeacherId(Long teacherId);
     Optional<GroupTeacher> findByGroupIdAndEffectiveMonthAndEffectiveYear(
         Long groupId, Integer month, Integer year);
 }
