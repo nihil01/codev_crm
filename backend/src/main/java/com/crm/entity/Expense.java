@@ -42,6 +42,9 @@ public class Expense {
     @JoinColumn(name = "recurring_rule_id")
     private RecurringExpenseRule recurringRule;
 
+    @Column(nullable = false)
+    private boolean cancelled = false;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

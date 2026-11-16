@@ -30,4 +30,5 @@ public class ExpenseDto {
     private String description;
     private String adChannel;
     private Long recurringRuleId;
+    private boolean cancelled;
 }
