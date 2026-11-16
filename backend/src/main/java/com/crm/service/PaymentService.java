@@ -11,6 +11,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.*;
 import java.util.List;
 
@@ -24,6 +25,8 @@ public class PaymentService {
     private final StudentFreezePeriodRepository freezePeriods;
     private final GroupStudentRepository memberships;
     private final ChangeAuditService audit;
+    private final GroupTeacherRepository groupTeachers;
+    private final TeacherShareAllocationRepository shareAllocations;
 
     public List<PaymentDto> getAll() { return invoices.findAll().stream().map(this::toDto).toList(); }
     public List<PaymentDto> getByStudent(Long studentId) { return invoices.findByStudentId(studentId).stream().map(this::toDto).toList(); }
@@ -85,7 +88,22 @@ public class PaymentService {
         PaymentTransaction transaction = transactions.saveAndFlush(PaymentTransaction.builder()
             .payment(p).amount(amount).method(method)
             .paidAt(LocalDateTime.now(ZoneId.of("Asia/Baku"))).recordedBy(actor).build());
-        p.setPaymentDate(LocalDate.now());
+        for (GroupTeacher assignment : groupTeachers.findByGroupId(p.getGroup().getId())) {
+            YearMonth since=YearMonth.of(assignment.getEffectiveYear(),assignment.getEffectiveMonth());
+            YearMonth paid=YearMonth.from(transaction.getPaidAt());
+            if(since.isAfter(paid)) continue;
+            BigDecimal share=amount.multiply(assignment.getSalaryPercentage())
+                .divide(BigDecimal.valueOf(100),2,RoundingMode.HALF_UP);
+            if(share.signum()<=0) continue;
+            TeacherShareAllocation allocation=shareAllocations.save(TeacherShareAllocation.builder()
+                .paymentTransaction(transaction).groupTeacher(assignment)
+                .teacher(assignment.getTeacher()).group(p.getGroup())
+                .percentage(assignment.getSalaryPercentage()).amount(share).build());
+            audit.record("ALLOCATE","TEACHER_SHARE",allocation.getId(),null,
+                java.util.Map.of("paymentId",p.getId(),"teacherId",assignment.getTeacher().getId(),
+                    "percentage",assignment.getSalaryPercentage(),"amount",share));
+        }
+        p.setPaymentDate(LocalDate.now(ZoneId.of("Asia/Baku")));
         p.setPaymentMethod(method);
         p.setStatus(amount.compareTo(rest) == 0 ? PaymentStatus.ODENILIB : PaymentStatus.GOZLENILIR);
         invoices.save(p);

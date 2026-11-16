@@ -35,6 +35,7 @@ public class CourseGroupService {
     private final CourseRepository courseRepository;
     private final StudentFreezePeriodRepository freezePeriods;
     private final ChangeAuditService audit;
+    private final TeacherShareAllocationRepository shareAllocations;
     @Value("${app.billing.first-payment-delay-months:0}")
     private int firstPaymentDelayMonths;
 
@@ -256,8 +257,8 @@ public class CourseGroupService {
         GroupTeacher selected=gts.stream()
             .filter(gt -> gt.getTeacher().getId().equals(teacherId))
             .findFirst().orElseThrow(()->new IllegalArgumentException("Müəllim qrupa təyin olunmayıb"));
-        if(paymentService.getCollectedForGroupMonth(groupId,selected.getEffectiveYear(),selected.getEffectiveMonth()).signum()>0)
-            throw new IllegalArgumentException("Mədaxil olduqdan sonra müəllimi silmək tarixçəni poza bilər");
+        if(shareAllocations.existsByGroupTeacherId(selected.getId()))
+            throw new IllegalArgumentException("Müəllimə pay hesablanıb; bu təyinat silinmir");
         GroupTeacherDto before=toGroupTeacherDto(selected);
         groupTeacherRepository.delete(selected);
         audit.record("REMOVE","GROUP_TEACHER",selected.getId(),before,null);
@@ -299,14 +300,9 @@ public class CourseGroupService {
     }
 
     public BigDecimal calculateTeacherSalary(Long groupId, Integer year, Integer month) {
-        List<GroupTeacher> teachers = groupTeacherRepository.findByGroupId(groupId);
-        BigDecimal collected = paymentService.getCollectedForGroupMonth(groupId, year, month);
-
-        return teachers.stream()
-            .filter(gt -> gt.getEffectiveYear() <= year &&
-                         (gt.getEffectiveYear() < year || gt.getEffectiveMonth() <= month))
-            .map(gt -> collected.multiply(gt.getSalaryPercentage()).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP))
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        java.time.YearMonth period=java.time.YearMonth.of(year,month);
+        return shareAllocations.sumForGroup(groupId,
+            period.atDay(1).atStartOfDay(),period.plusMonths(1).atDay(1).atStartOfDay());
     }
 
     private void validateTransition(GroupStatus oldStatus,GroupStatus newStatus) {
@@ -372,7 +368,9 @@ public class CourseGroupService {
         dto.setId(gt.getId());
         dto.setTeacherId(gt.getTeacher().getId());
         dto.setSalaryPercentage(gt.getSalaryPercentage());
-        dto.setCalculatedSalary(gt.getCalculatedSalary());
+        java.time.YearMonth current=java.time.YearMonth.now(java.time.ZoneId.of("Asia/Baku"));
+        dto.setCalculatedSalary(shareAllocations.sumForAssignment(gt.getId(),
+            current.atDay(1).atStartOfDay(),current.plusMonths(1).atDay(1).atStartOfDay()));
         dto.setSalaryStatus(gt.getSalaryStatus());
         dto.setEffectiveMonth(gt.getEffectiveMonth());
         dto.setEffectiveYear(gt.getEffectiveYear());
