@@ -29,6 +29,7 @@ import {
   Repeat2,
   BookOpenCheck,
   ShieldCheck,
+  Send,
 } from 'lucide-react';
 
 const navItems = [
@@ -39,6 +40,7 @@ const navItems = [
   { path: '/students', label: 'Tələbələr', icon: Users },
   { path: '/teacher-portal', label: 'Mənim qruplarım', icon: BookOpenCheck },
   { path: '/teacher-accounts', label: 'Müəllim hesabları', icon: ShieldCheck },
+  { path: '/reminder-dispatches', label: 'Göndəriş jurnalı', icon: Send },
   { path: '/teachers', label: 'Müəllimlər', icon: GraduationCap },
   { path: '/groups', label: 'Qruplar', icon: Layers },
   { path: '/payments', label: 'Ödənişlər', icon: CreditCard },
@@ -102,7 +104,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             : item.path !== '/teacher-portal' &&
               (user?.role === 'ADMIN' || !['/', '/expenses', '/reports', '/forecast',
                 '/certificates', '/managers', '/audit', '/forecast/scenarios',
-                '/analytics', '/expense-rules', '/teacher-accounts'].includes(item.path))).map((item) => {
+                '/analytics', '/expense-rules', '/teacher-accounts', '/reminder-dispatches'].includes(item.path))).map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link
@@ -162,7 +164,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             : item.path !== '/teacher-portal' &&
               (user?.role === 'ADMIN' || !['/', '/expenses', '/reports', '/forecast',
                 '/certificates', '/managers', '/audit', '/forecast/scenarios',
-                '/analytics', '/expense-rules', '/teacher-accounts'].includes(item.path))).map((item) => {
+                '/analytics', '/expense-rules', '/teacher-accounts', '/reminder-dispatches'].includes(item.path))).map((item) => {
                   const isActive = location.pathname === item.path;
                   return (
                     <Link key={item.path} to={item.path} onClick={() => setMobileOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${isActive ? navActive : `${navText} ${navHover}`}`}>

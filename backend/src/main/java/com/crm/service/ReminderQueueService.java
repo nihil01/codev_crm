@@ -85,9 +85,11 @@ public class ReminderQueueService {
         if(!payment.getStudent().isReminderConsent() || payment.isFrozen() ||
            payment.getGroup().getStatus()==GroupStatus.DAYANDIRILMIS ||
            payments.remaining(payment).signum()<=0) {
-            entry.setStatus(ReminderDispatchStatus.SENT);
-            entry.setLastError("SKIPPED: no outstanding consented debt");
+            entry.setStatus(ReminderDispatchStatus.SKIPPED);
+            entry.setLastError("No outstanding consented debt");
             reminders.save(entry);
+            audit.record("SKIP","PAYMENT_REMINDER",id,Map.of("status","PENDING"),
+                Map.of("status","SKIPPED"));
             return Optional.empty();
         }
         entry.setStatus(ReminderDispatchStatus.SENDING);

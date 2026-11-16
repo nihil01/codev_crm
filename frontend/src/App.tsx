@@ -26,6 +26,7 @@ import { StudentFreezes } from './pages/StudentFreezes';
 import { RecurringRules } from './pages/RecurringRules';
 import { TeacherPortal } from './pages/TeacherPortal';
 import { TeacherAccounts } from './pages/TeacherAccounts';
+import { ReminderDispatches } from './pages/ReminderDispatches';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -66,6 +67,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/expenses" element={<ProtectedRoute adminOnly><Expenses /></ProtectedRoute>} />
       <Route path="/expense-rules" element={<ProtectedRoute adminOnly><RecurringRules /></ProtectedRoute>} />
       <Route path="/teacher-accounts" element={<ProtectedRoute adminOnly><TeacherAccounts /></ProtectedRoute>} />
+      <Route path="/reminder-dispatches" element={<ProtectedRoute adminOnly><ReminderDispatches /></ProtectedRoute>} />
       <Route path="/teacher-portal" element={<ProtectedRoute teacherOnly><TeacherPortal /></ProtectedRoute>} />
       <Route path="/reports" element={<ProtectedRoute adminOnly><Reports /></ProtectedRoute>} />
       <Route path="/forecast" element={<ProtectedRoute adminOnly><Forecast /></ProtectedRoute>} />

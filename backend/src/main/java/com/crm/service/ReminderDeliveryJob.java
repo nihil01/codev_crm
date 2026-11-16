@@ -29,7 +29,16 @@ public class ReminderDeliveryJob {
     @Scheduled(cron="0 0 9 * * *",zone="Asia/Baku")
     public void dispatch() {
         if(!"WEBHOOK".equalsIgnoreCase(mode))return;
-        URI target=URI.create(webhookUrl);
+        if(webhookUrl==null || webhookUrl.isBlank()) {
+            log.error("Reminder delivery disabled: webhook URL is missing");
+            return;
+        }
+        URI target;
+        try { target=URI.create(webhookUrl); }
+        catch(IllegalArgumentException exception) {
+            log.error("Reminder delivery disabled: invalid webhook URL");
+            return;
+        }
         if(!"https".equalsIgnoreCase(target.getScheme()) || target.getHost()==null ||
            webhookToken==null || webhookToken.isBlank()) {
             log.error("Reminder delivery disabled: HTTPS webhook and token are required");
@@ -48,12 +57,14 @@ public class ReminderDeliveryJob {
             if(payload.isEmpty())continue;
             var send=payload.get();
             try {
-                client.post().uri(target)
+                var response=client.post().uri(target)
                     .header("Authorization","Bearer "+webhookToken)
                     .header("Idempotency-Key",send.key())
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(Map.of("phone",send.phone(),"message",send.message(),"channel","PAYMENT_REMINDER"))
                     .retrieve().toBodilessEntity();
+                if(!response.getStatusCode().is2xxSuccessful())
+                    throw new IllegalStateException("Non-success webhook response");
                 queue.finish(send.id(),true,null);
             } catch(Exception e) {
                 // Do not log phone, message, bearer token or remote response body.
