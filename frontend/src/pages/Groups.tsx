@@ -93,6 +93,7 @@ export const Groups: React.FC = () => {
   const closeModal = () => { setShowModal(false); setEditing(null); };
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.courseId) {toast.error('Kurs seçilməlidir');return;}
     editing?.id ? updateMutation.mutate({ id: editing.id, data: form }) : createMutation.mutate(form);
   };
 

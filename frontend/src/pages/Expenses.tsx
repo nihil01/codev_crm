@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 
 const typeLabels: Record<string, string> = {
   YER: 'Yer (İcarə)', ISCHI_MAASI: 'İşçi Maaşı', INTERNET: 'İnternet',
-  ELEKTRIK: 'Elektrik', SU: 'Su', QAZ: 'Qaz', DIGER: 'Digər',
+  ELEKTRIK: 'Elektrik', SU: 'Su', QAZ: 'Qaz', DIGER: 'Digər', REKLAM: 'Reklam', KOMMUNAL: 'Kommunal', AVADANLIQ: 'Avadanlıq',
 };
 const MN = ['', 'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'İyun', 'İyul', 'Avqust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
 
@@ -24,7 +24,7 @@ export function Expenses() {
   const [view6, setView6] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
-  const [form, setForm] = useState({ type: ExpenseType.YER, amount: 0, recurring: false, description: '', expenseYear: cy, expenseMonth: cm });
+  const [form, setForm] = useState({ type: ExpenseType.YER, amount: 0, recurring: false, description: '', adChannel: '', expenseYear: cy, expenseMonth: cm });
   const qc = useQueryClient();
 
   const { data: list = [], isLoading } = useQuery({
@@ -64,8 +64,8 @@ export function Expenses() {
     onSuccess: () => { mk(null); toast.success('Silindi'); },
   });
 
-  const openNew = () => { setEditing(null); setForm({ type: ExpenseType.YER, amount: 0, recurring: false, description: '', expenseYear: year, expenseMonth: month }); setShowModal(true); };
-  const openEdit = (e: Expense) => { setEditing(e); setForm({ type: e.type, amount: e.amount, recurring: e.recurring, description: e.description || '', expenseYear: e.expenseYear, expenseMonth: e.expenseMonth }); setShowModal(true); };
+  const openNew = () => { setEditing(null); setForm({ type: ExpenseType.YER, amount: 0, recurring: false, description: '', adChannel: '', expenseYear: year, expenseMonth: month }); setShowModal(true); };
+  const openEdit = (e: Expense) => { setEditing(e); setForm({ type: e.type, amount: e.amount, recurring: e.recurring, description: e.description || '', adChannel: e.adChannel || '', expenseYear: e.expenseYear, expenseMonth: e.expenseMonth }); setShowModal(true); };
   const closeModal = () => { setShowModal(false); setEditing(null); };
   const onSubmit = (ev: React.FormEvent) => { ev.preventDefault(); editing?.id ? updateMut.mutate({ id: editing.id, data: form }) : createMut.mutate(form); };
   const total = list.reduce((s, e) => s + e.amount, 0);
@@ -172,6 +172,14 @@ export function Expenses() {
                     <label className={`block text-sm mb-1 ${t.label}`}>Məbləğ (AZN)</label>
                     <input type="number" value={form.amount || ''} onChange={e => setForm({ ...form, amount: +e.target.value })} className={input} min={0} step={0.01} required />
                   </div>
+                  {form.type === ExpenseType.REKLAM && <div>
+                    <label className={`block text-sm mb-1 ${t.label}`}>Reklam kanalı</label>
+                    <select className={input} value={form.adChannel||''} onChange={e=>setForm({...form,adChannel:e.target.value})} required>
+                      <option value="">Seçin</option><option value="INSTAGRAM">Instagram</option><option value="WHATSAPP">WhatsApp</option>
+                      <option value="TIKTOK">TikTok</option><option value="SAYT">Sayt</option><option value="ZENG">Zəng</option>
+                      <option value="TOVSIYE">Tövsiyə</option><option value="BIRBASA_GELIS">Birbaşa gəliş</option>
+                    </select>
+                  </div>}
                   <div>
                     <label className={`block text-sm mb-1 ${t.label}`}>Təsvir</label>
                     <input type="text" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className={input} />

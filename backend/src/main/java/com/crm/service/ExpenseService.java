@@ -44,7 +44,7 @@ public class ExpenseService {
     public ExpenseDto create(ExpenseDto dto) {
         if (dto.getRecurring()) {
             // Create for all 12 months of the year
-            for (int m = 1; m <= 12; m++) {
+            for (int m = dto.getExpenseMonth(); m <= 12; m++) {
                 Expense expense = Expense.builder()
                     .type(dto.getType())
                     .amount(dto.getAmount())
@@ -178,7 +178,8 @@ public class ExpenseService {
             // Only create if doesn't already exist for this month
             boolean exists = expenseRepository.findByExpenseYearAndExpenseMonth(year, month).stream()
                 .anyMatch(e -> e.getType() == recurringExpense.getType() && e.getRecurring()
-                        && sameDescription(e.getDescription(), recurringExpense.getDescription()));
+                        && sameDescription(e.getDescription(), recurringExpense.getDescription())
+                        && sameDescription(e.getAdChannel(), recurringExpense.getAdChannel()));
             if (!exists) {
                 Expense newExpense = Expense.builder()
                     .type(recurringExpense.getType())

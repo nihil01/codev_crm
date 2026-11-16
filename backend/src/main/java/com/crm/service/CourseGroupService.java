@@ -50,6 +50,8 @@ public class CourseGroupService {
 
     @Transactional
     public CourseGroupDto create(CourseGroupDto dto) {
+        if (dto.getCourseId()==null || dto.getCourseId()<=0)
+            throw new IllegalArgumentException("Kurs seçilməlidir");
         CourseGroup group = CourseGroup.builder()
             .groupNumber(dto.getGroupNumber())
             .startDate(dto.getStartDate())
@@ -239,7 +241,7 @@ public class CourseGroupService {
     }
 
     private void applyGroupMetadata(CourseGroup group, CourseGroupDto dto) {
-        if (dto.getCourseId() != null) {
+        if (dto.getCourseId() != null && dto.getCourseId() > 0) {
             Course course = courseRepository.findById(dto.getCourseId())
                 .orElseThrow(() -> new IllegalArgumentException("Kurs tapılmadı"));
             group.setCourse(course);
