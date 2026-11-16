@@ -39,6 +39,14 @@ public class Payment {
 
     private LocalDate paymentDate;
 
+    private LocalDate dueDate;
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+    @Column(columnDefinition = "TEXT")
+    private String discountReason;
+    @Column(nullable = false)
+    private boolean frozen = false;
+
     @Enumerated(EnumType.STRING)
     private PaymentMethod paymentMethod;
 

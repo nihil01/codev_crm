@@ -3,6 +3,9 @@ package com.crm.repository;
 import com.crm.entity.Payment;
 import com.crm.enums.PaymentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -10,6 +13,10 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Payment p WHERE p.id = :id")
+    Optional<Payment> lockById(@Param("id") Long id);
+
     List<Payment> findByStudentId(Long studentId);
     List<Payment> findByGroupId(Long groupId);
     List<Payment> findByStudentIdAndGroupId(Long studentId, Long groupId);

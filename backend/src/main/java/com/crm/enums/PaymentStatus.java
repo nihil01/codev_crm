@@ -4,5 +4,6 @@ public enum PaymentStatus {
     ODENILIB,       // Оплачен
     GOZLENILIR,     // Ожидается
     GECIKIB,        // Просрочен
-    BAGISLANIB      // Прощён
+    BAGISLANIB,     // Прощён
+    DONDURULUB     // Заморожен
 }

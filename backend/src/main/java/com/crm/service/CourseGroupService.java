@@ -27,6 +27,7 @@ public class CourseGroupService {
     private final StudentRepository studentRepository;
     private final TeacherRepository teacherRepository;
     private final PaymentRepository paymentRepository;
+    private final PaymentService paymentService;
 
     public List<CourseGroupDto> getAll() {
         return groupRepository.findAll().stream()
@@ -130,7 +131,7 @@ public class CourseGroupService {
             .build();
 
         // Create payment schedule for all months
-        createPaymentSchedule(student, group, dto.getMonthlyAmount());
+        createPaymentSchedule(student, group, dto.getMonthlyAmount(), dto.getJoinDate());
 
         // Only set primary group if student doesn't have one yet
         if (student.getGroup() == null) {
@@ -199,33 +200,30 @@ public class CourseGroupService {
 
     // === Payment Schedule ===
 
-    private void createPaymentSchedule(Student student, CourseGroup group, BigDecimal monthlyAmount) {
-        LocalDate current = group.getStartDate();
-        LocalDate end = group.getEndDate();
-
-        while (!current.isAfter(end)) {
+    private void createPaymentSchedule(Student student, CourseGroup group, BigDecimal monthlyAmount, LocalDate joinDate) {
+        // Billing starts at enrolment. Exactly durationMonths invoices, not durationMonths+1.
+        LocalDate first = joinDate == null ? group.getStartDate() : joinDate;
+        for (int i=0; i<group.getDurationMonths(); i++) {
+            LocalDate due = first.plusMonths(i);
             Payment payment = Payment.builder()
-                .student(student)
-                .group(group)
-                .paymentYear(current.getYear())
-                .paymentMonth(current.getMonthValue())
-                .amount(monthlyAmount)
-                .status(PaymentStatus.GOZLENILIR)
-                .build();
+                .student(student).group(group)
+                .paymentYear(due.getYear()).paymentMonth(due.getMonthValue())
+                .amount(monthlyAmount).dueDate(due)
+                .discountAmount(BigDecimal.ZERO).frozen(false)
+                .status(PaymentStatus.GOZLENILIR).build();
             paymentRepository.save(payment);
-            current = current.plusMonths(1);
         }
     }
 
     // === Group Summary Calculations ===
 
     public BigDecimal calculateGroupCollected(Long groupId, Integer year, Integer month) {
-        return paymentRepository.sumCollectedForGroupAndMonth(groupId, year, month);
+        return paymentService.getCollectedForGroupMonth(groupId, year, month);
     }
 
     public BigDecimal calculateTeacherSalary(Long groupId, Integer year, Integer month) {
         List<GroupTeacher> teachers = groupTeacherRepository.findByGroupId(groupId);
-        BigDecimal collected = paymentRepository.sumCollectedForGroupAndMonth(groupId, year, month);
+        BigDecimal collected = paymentService.getCollectedForGroupMonth(groupId, year, month);
 
         return teachers.stream()
             .filter(gt -> gt.getEffectiveYear() <= year &&

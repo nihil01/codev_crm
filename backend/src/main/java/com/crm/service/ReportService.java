@@ -61,7 +61,7 @@ public class ReportService {
         BigDecimal fixedExpenses = calculateFixedExpensesForMonth(year, month);
         report.setTotalFixedExpenses(fixedExpenses);
 
-        BigDecimal totalExpenses = teacherSalaries.add(fixedExpenses).add(utilityExpenses);
+        BigDecimal totalExpenses = teacherSalaries.add(utilityExpenses);
         report.setTotalExpenses(totalExpenses);
 
         report.setNetProfit(collected.subtract(totalExpenses));
@@ -118,8 +118,7 @@ public class ReportService {
             mc.setMonth(month);
             mc.setIncome(paymentService.getCollectedForMonth(year, month));
             mc.setExpenses(expenseService.getTotalExpenses(year, month)
-                .add(calculateTeacherSalaries(year, month))
-                .add(calculateFixedExpensesForMonth(year, month)));
+                .add(calculateTeacherSalaries(year, month)));
             mc.setProfit(mc.getIncome().subtract(mc.getExpenses()));
 
             comparisons.add(mc);

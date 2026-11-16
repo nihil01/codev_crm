@@ -10,6 +10,12 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import com.crm.entity.PaymentTransaction;
+import com.crm.service.PaymentReceiptService;
+import java.util.Map;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -18,6 +24,7 @@ import java.util.List;
 public class PaymentController {
 
     private final PaymentService paymentService;
+    private final PaymentReceiptService receiptService;
 
     @GetMapping
     public ResponseEntity<List<PaymentDto>> getAll() {
@@ -75,6 +82,54 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.updateStatus(id, status));
     }
 
+    @PostMapping("/{id}/partial")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<PaymentDto> recordPartial(@PathVariable Long id,
+            @RequestParam BigDecimal amount, @RequestParam PaymentMethod method) {
+        return ResponseEntity.ok(paymentService.recordPartial(id, amount, method));
+    }
+
+    @PutMapping("/{id}/discount")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<PaymentDto> discount(@PathVariable Long id,
+            @RequestParam BigDecimal amount, @RequestParam String reason) {
+        return ResponseEntity.ok(paymentService.discount(id, amount, reason));
+    }
+
+    @PutMapping("/{id}/freeze")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<PaymentDto> freeze(@PathVariable Long id, @RequestParam boolean frozen) {
+        return ResponseEntity.ok(paymentService.freeze(id, frozen));
+    }
+
+    @GetMapping("/{id}/transactions")
+    public ResponseEntity<List<Map<String, Object>>> transactions(@PathVariable Long id) {
+        return ResponseEntity.ok(paymentService.transactions(id).stream().map(t -> Map.<String,Object>of(
+            "id", t.getId(), "amount", t.getAmount(), "method", t.getMethod(),
+            "paidAt", t.getPaidAt(), "recordedBy", t.getRecordedBy())).toList());
+    }
+
+    @GetMapping("/transactions/{id}/receipt")
+    public ResponseEntity<byte[]> receipt(@PathVariable Long id) {
+        byte[] pdf = receiptService.generate(paymentService.transaction(id));
+        return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,
+            "attachment; filename=odenis-qebzi.pdf").contentType(MediaType.APPLICATION_PDF).body(pdf);
+    }
+
+    @GetMapping("/reminders")
+    public ResponseEntity<List<Map<String,Object>>> reminders() {
+        LocalDate now = LocalDate.now(java.time.ZoneId.of("Asia/Baku"));
+        return ResponseEntity.ok(paymentService.getAll().stream()
+            .filter(p -> p.getDueDate() != null && !p.getDueDate().isAfter(now)
+                && p.getRemainingAmount().signum() > 0
+                && !p.isFrozen() && p.getStatus() != PaymentStatus.DONDURULUB)
+            .map(p -> Map.<String,Object>of(
+                "paymentId", p.getId(), "student", p.getStudentFirstName()+" "+p.getStudentLastName(),
+                "dueDate", p.getDueDate(), "remaining", p.getRemainingAmount(),
+                "message", "Salam! Codev üzrə "+p.getRemainingAmount()+" AZN ödəniş qalığınız var. Zəhmət olmasa ödənişi yoxlayın."
+            )).toList());
+    }
+
     @PostMapping("/mark-overdue")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> markOverdue() {
@@ -83,7 +138,7 @@ public class PaymentController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<PaymentDto> create(@RequestBody PaymentDto dto) {
         return ResponseEntity.ok(paymentService.create(dto));
     }
