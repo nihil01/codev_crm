@@ -178,6 +178,8 @@ export interface Expense {
   recurring: boolean;
   description?: string;
   adChannel?: string;
+  recurringRuleId?: number;
+  cancelled?: boolean;
 }
 
 export interface DashboardData {

@@ -23,6 +23,7 @@ import { Reminders } from './pages/Reminders';
 import { ScenarioForecast } from './pages/ScenarioForecast';
 import { Analytics } from './pages/Analytics';
 import { StudentFreezes } from './pages/StudentFreezes';
+import { RecurringRules } from './pages/RecurringRules';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -55,6 +56,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
       <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
       <Route path="/expenses" element={<ProtectedRoute adminOnly><Expenses /></ProtectedRoute>} />
+      <Route path="/expense-rules" element={<ProtectedRoute adminOnly><RecurringRules /></ProtectedRoute>} />
       <Route path="/reports" element={<ProtectedRoute adminOnly><Reports /></ProtectedRoute>} />
       <Route path="/forecast" element={<ProtectedRoute adminOnly><Forecast /></ProtectedRoute>} />
       <Route path="/forecast/scenarios" element={<ProtectedRoute adminOnly><ScenarioForecast /></ProtectedRoute>} />
