@@ -85,6 +85,30 @@ public class LeadService {
         return created.getId();
     }
 
+    @Transactional
+    public LeadDto moveStage(Long id,LeadStage stage,String lostReason,
+                             java.time.LocalDateTime consultationAt) {
+        Lead lead=leads.lockById(id)
+            .orElseThrow(()->new IllegalArgumentException("Lead tapılmadı"));
+        if(stage==null)throw new IllegalArgumentException("Mərhələ tələb olunur");
+        if(lead.getConvertedStudent()!=null && stage!=LeadStage.QEYDIYYAT)
+            throw new IllegalArgumentException("Qeydiyyatdan keçmiş lead başqa mərhələyə keçirilmir");
+        if(stage==LeadStage.QEYDIYYAT && lead.getConvertedStudent()==null)
+            throw new IllegalArgumentException("Qeydiyyat mərhələsinə keçmək üçün Qeydiyyata al funksiyasından istifadə edin");
+        if(stage==LeadStage.ITIRILDI && (lostReason==null||lostReason.isBlank()))
+            throw new IllegalArgumentException("İtirilmiş lead üçün səbəb məcburidir");
+        if(stage==LeadStage.SINAQ_KONSULTASIYA && consultationAt==null &&
+           lead.getConsultationAt()==null)
+            throw new IllegalArgumentException("Sınaq / konsultasiya tarixi tələb olunur");
+        LeadDto before=dto(lead);
+        lead.setStage(stage);
+        lead.setLostReason(stage==LeadStage.ITIRILDI ? lostReason.trim() : null);
+        if(consultationAt!=null)lead.setConsultationAt(consultationAt);
+        LeadDto changed=dto(leads.save(lead));
+        audit.record("MOVE_STAGE","LEAD",id,before,changed);
+        return changed;
+    }
+
     private Lead find(Long id) {
         return leads.findById(id).orElseThrow(() -> new IllegalArgumentException("Lead tapılmadı"));
     }
@@ -95,6 +119,8 @@ public class LeadService {
     }
 
     private void apply(Lead lead, LeadDto data, User actor) {
+        if(lead.getConvertedStudent()!=null && data.getStage()!=LeadStage.QEYDIYYAT)
+            throw new IllegalArgumentException("Qeydiyyatdan keçmiş lead başqa mərhələyə keçirilmir");
         if (data.getStage() == LeadStage.ITIRILDI &&
             (data.getLostReason() == null || data.getLostReason().isBlank()))
             throw new IllegalArgumentException("İtirilmiş lead üçün səbəb məcburidir");

@@ -2,6 +2,9 @@ package com.crm.controller;
 
 import com.crm.dto.LeadDto;
 import com.crm.service.LeadService;
+import com.crm.enums.LeadStage;
+import jakarta.validation.constraints.NotNull;
+import java.time.LocalDateTime;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +25,14 @@ public class LeadController {
     public LeadDto create(@Valid @RequestBody LeadDto data) { return service.create(data); }
     @PutMapping("/{id}")
     public LeadDto update(@PathVariable Long id, @Valid @RequestBody LeadDto data) { return service.update(id, data); }
+
+    public record StageMoveRequest(@NotNull LeadStage stage,String lostReason,
+                                   LocalDateTime consultationAt) {}
+
+    @PatchMapping("/{id}/stage")
+    public LeadDto moveStage(@PathVariable Long id,@Valid @RequestBody StageMoveRequest request) {
+        return service.moveStage(id,request.stage(),request.lostReason(),request.consultationAt());
+    }
     @PostMapping("/{id}/convert")
     public java.util.Map<String,Long> convert(@PathVariable Long id) {
         return java.util.Map.of("studentId",service.convert(id));
