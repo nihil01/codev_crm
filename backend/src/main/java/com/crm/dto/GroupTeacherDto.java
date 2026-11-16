@@ -16,6 +16,7 @@ public class GroupTeacherDto {
     @NotNull(message = "Maaş faizi boş ola bilməz")
     @DecimalMin(value = "1", message = "Faiz 1-dən böyük olmalıdır")
     @DecimalMax(value = "100", message = "Faiz 100-dən kiçik olmalıdır")
+    @Digits(integer=3,fraction=2)
     private BigDecimal salaryPercentage;
 
     private BigDecimal calculatedSalary;

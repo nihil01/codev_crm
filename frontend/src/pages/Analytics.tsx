@@ -4,12 +4,13 @@ import api from '../api/client';
 import {useThemeClasses} from '../lib/theme';
 
 type Row=Record<string,string|number|null>;
-type Data={sources:Row[];managers:Row[];debtors:Row[];groups:Row[]};
+type Data={sources:Row[];managers:Row[];debtors:Row[];groups:Row[];teachers:Row[]};
 const sections=[
  {key:'sources',name:'Lead mənbələri və tələbə əldə etmə',cols:['source','leads','won','registered','advertising','cac']},
  {key:'managers',name:'Menecer nəticələri',cols:['manager','leads','registered','conversionPercent']},
  {key:'debtors',name:'Borclular',cols:['student','group','period','dueDate','debt','status']},
- {key:'groups',name:'Qrup qazancı (müəllim payından sonra)',cols:['group','collected','teacherShare','afterTeacherShare']}
+ {key:'groups',name:'Qrup qazancı (müəllim payından sonra)',cols:['group','collected','teacherShare','afterTeacherShare']},
+ {key:'teachers',name:'Müəllimlərə hesablanmış paylar',cols:['teacher','group','earned']}
 ] as const;
 export const Analytics:React.FC=()=>{
  const t=useThemeClasses();

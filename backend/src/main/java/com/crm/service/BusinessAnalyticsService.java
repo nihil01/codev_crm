@@ -23,6 +23,7 @@ public class BusinessAnalyticsService {
     private final CourseGroupRepository groups;
     private final PaymentService payments;
     private final CourseGroupService groupService;
+    private final TeacherShareAllocationRepository allocations;
 
     public Map<String,Object> summary(int year,int month) {
         YearMonth period=YearMonth.of(year,month);
@@ -73,7 +74,14 @@ public class BusinessAnalyticsService {
                 "teacherShare",teacher,"afterTeacherShare",collected.subtract(teacher)));
         }
 
-        return row("sources",sources,"managers",managers,"debtors",debtors,"groups",groupProfits);
+        List<Map<String,Object>> teacherShares=new ArrayList<>();
+        for(Object[] data:allocations.totalsByTeacherForPeriod(
+            period.atDay(1).atStartOfDay(),period.plusMonths(1).atDay(1).atStartOfDay())) {
+            teacherShares.add(row("teacherId",data[0],"teacher",data[1]+" "+data[2],
+                "group",data[3],"earned",data[4]));
+        }
+        return row("sources",sources,"managers",managers,"debtors",debtors,
+            "groups",groupProfits,"teachers",teacherShares);
     }
 
     private Map<String,Object> row(Object...pairs) {
