@@ -1,7 +1,8 @@
 package com.crm.enums;
-
 public enum GroupStatus {
-    AKTIV,
-    TAMAMLANMIS,
-    DAYANDIRILMIS
+    TOPLANIR,
+    BASLAYIB,
+    AKTIV,         // köhnə məlumatların uyğunluğu üçün
+    DAYANDIRILMIS,
+    TAMAMLANMIS
 }

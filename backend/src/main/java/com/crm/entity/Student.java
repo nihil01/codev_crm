@@ -1,6 +1,8 @@
 package com.crm.entity;
 
 import jakarta.persistence.*;
+import com.crm.enums.LeadSource;
+import com.crm.enums.StudentStatus;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -25,15 +27,31 @@ public class Student {
     @Column(nullable = false)
     private String lastName;
 
-    @Column(nullable = false, unique = true, length = 7)
+    @Column(unique = true, length = 7)
     private String fin;
 
-    @Column(nullable = false)
     private String email;
 
     private String phone;
 
     private LocalDate birthDate;
+
+    @Enumerated(EnumType.STRING)
+    private LeadSource source;
+
+    private String parentName;
+    private String parentPhone;
+    private String address;
+
+    @Column(columnDefinition = "TEXT")
+    private String note;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private StudentStatus status = StudentStatus.AKTIV;
+
+    @Column(columnDefinition = "TEXT")
+    private String exitReason;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id")

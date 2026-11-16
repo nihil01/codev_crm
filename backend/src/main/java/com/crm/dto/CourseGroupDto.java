@@ -1,6 +1,7 @@
 package com.crm.dto;
 
 import com.crm.enums.GroupStatus;
+import com.crm.enums.TrainingMode;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
@@ -23,4 +24,12 @@ public class CourseGroupDto {
     private LocalDate endDate;
 
     private GroupStatus status;
+    private Long courseId;
+    private String courseName;
+    private String lessonDays;
+    private String lessonTime;
+    private TrainingMode trainingMode;
+    private String room;
+    @Min(1)
+    private Integer maxStudents;
 }

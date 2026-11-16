@@ -1,6 +1,8 @@
 package com.crm.dto;
 
 import jakarta.validation.constraints.*;
+import com.crm.enums.LeadSource;
+import com.crm.enums.StudentStatus;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -15,17 +17,23 @@ public class StudentDto {
     @NotBlank(message = "Soyad boş ola bilməz")
     private String lastName;
 
-    @NotBlank(message = "FİN boş ola bilməz")
-    @Size(min = 7, max = 7, message = "FİN 7 simvol olmalıdır")
+    @Pattern(regexp = "^$|^[A-Za-z0-9]{7}$", message = "FİN 7 simvol olmalıdır")
     private String fin;
 
-    @NotBlank(message = "E-poçt boş ola bilməz")
     @Email(message = "Yanlış e-poçt formatı")
     private String email;
 
     private String phone;
 
     private LocalDate birthDate;
+
+    private LeadSource source;
+    private String parentName;
+    private String parentPhone;
+    private String address;
+    private String note;
+    private StudentStatus status;
+    private String exitReason;
 
     private Long groupId;
 

@@ -19,17 +19,33 @@ import {
   ChevronDown,
   Sun,
   Moon,
+  UserCog,
+  ClipboardList,
+  History,
+  MessageSquareText,
+  ChartNoAxesCombined,
+  Target,
+  CalendarOff,
+  Repeat2,
 } from 'lucide-react';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/leads', label: 'Leadlər', icon: ClipboardList },
+  { path: '/reminders', label: 'Xatırlatmalar', icon: MessageSquareText },
+  { path: '/freezes', label: 'Dondurulmuş aylar', icon: CalendarOff },
   { path: '/students', label: 'Tələbələr', icon: Users },
   { path: '/teachers', label: 'Müəllimlər', icon: GraduationCap },
   { path: '/groups', label: 'Qruplar', icon: Layers },
   { path: '/payments', label: 'Ödənişlər', icon: CreditCard },
   { path: '/expenses', label: 'Xərclər', icon: Receipt },
+  { path: '/expense-rules', label: 'Daimi xərclər', icon: Repeat2 },
   { path: '/reports', label: 'Hesabatlar', icon: BarChart3 },
   { path: '/forecast', label: 'Proqnoz', icon: TrendingUp },
+  { path: '/forecast/scenarios', label: 'Ssenarilər', icon: Target },
+  { path: '/analytics', label: 'Analitika', icon: ChartNoAxesCombined },
+  { path: '/managers', label: 'Menecerlər', icon: UserCog },
+  { path: '/audit', label: 'Dəyişiklik tarixçəsi', icon: History },
   { path: '/certificates', label: 'Sertifikatlar', icon: Award },
 ];
 
@@ -77,7 +93,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </div>
 
         <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
+          {navItems.filter((item) => user?.role === 'ADMIN' || !['/', '/expenses', '/reports', '/forecast', '/certificates', '/managers', '/audit', '/forecast/scenarios', '/analytics', '/expense-rules'].includes(item.path)).map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link
@@ -132,7 +148,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 </button>
               </div>
               <nav className="py-4 px-2 space-y-1">
-                {navItems.map((item) => {
+                {navItems.filter((item) => user?.role === 'ADMIN' || !['/', '/expenses', '/reports', '/forecast', '/certificates', '/managers', '/audit', '/forecast/scenarios', '/analytics', '/expense-rules'].includes(item.path)).map((item) => {
                   const isActive = location.pathname === item.path;
                   return (
                     <Link key={item.path} to={item.path} onClick={() => setMobileOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${isActive ? navActive : `${navText} ${navHover}`}`}>

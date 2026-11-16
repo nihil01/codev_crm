@@ -8,9 +8,9 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://db:5432/tedris_crm
-    username: postgres
-    password: postgres
+    url: ${DB_URL:jdbc:postgresql://db:5432/tedris_crm}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:}
 
   data:
     redis:
@@ -28,7 +28,9 @@ spring:
 
 app:
   cors:
-    allowed-origins: http://localhost:5173,http://localhost
+    allowed-origins: ${CRM_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost,https://crm.codev.academy}
+  billing:
+    first-payment-delay-months: ${CRM_FIRST_PAYMENT_DELAY_MONTHS:0}
 
 logging:
   level:

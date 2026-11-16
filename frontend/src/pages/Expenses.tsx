@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 
 const typeLabels: Record<string, string> = {
   YER: 'Yer (İcarə)', ISCHI_MAASI: 'İşçi Maaşı', INTERNET: 'İnternet',
-  ELEKTRIK: 'Elektrik', SU: 'Su', QAZ: 'Qaz', DIGER: 'Digər',
+  ELEKTRIK: 'Elektrik', SU: 'Su', QAZ: 'Qaz', DIGER: 'Digər', REKLAM: 'Reklam', KOMMUNAL: 'Kommunal', AVADANLIQ: 'Avadanlıq',
 };
 const MN = ['', 'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'İyun', 'İyul', 'Avqust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
 
@@ -24,7 +24,7 @@ export function Expenses() {
   const [view6, setView6] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
-  const [form, setForm] = useState({ type: ExpenseType.YER, amount: 0, recurring: false, description: '', expenseYear: cy, expenseMonth: cm });
+  const [form, setForm] = useState({ type: ExpenseType.YER, amount: 0, recurring: false, description: '', adChannel: '', expenseYear: cy, expenseMonth: cm });
   const qc = useQueryClient();
 
   const { data: list = [], isLoading } = useQuery({
@@ -40,14 +40,14 @@ export function Expenses() {
         let m = cm - i, y = cy;
         if (m <= 0) { m += 12; y -= 1; }
         const d = await expensesApi.getByPeriod(y, m);
-        r.push({ y, m, total: d.reduce((s, e) => s + e.amount, 0), count: d.length });
+        r.push({ y, m, total: d.filter(e=>!e.cancelled).reduce((s, e) => s + e.amount, 0), count: d.filter(e=>!e.cancelled).length });
       }
       return r;
     },
     enabled: view6,
   });
 
-  const mk = (data: any) => qc.invalidateQueries({ queryKey: ['exp'] });
+  const mk = (data: any) => {qc.invalidateQueries({ queryKey: ['exp'] }); qc.invalidateQueries({queryKey:['expense-rules']});};
 
   const createMut = useMutation({
     mutationFn: (d: any) => expensesApi.create({ ...d, expenseYear: year, expenseMonth: month }),
@@ -64,11 +64,17 @@ export function Expenses() {
     onSuccess: () => { mk(null); toast.success('Silindi'); },
   });
 
-  const openNew = () => { setEditing(null); setForm({ type: ExpenseType.YER, amount: 0, recurring: false, description: '', expenseYear: year, expenseMonth: month }); setShowModal(true); };
-  const openEdit = (e: Expense) => { setEditing(e); setForm({ type: e.type, amount: e.amount, recurring: e.recurring, description: e.description || '', expenseYear: e.expenseYear, expenseMonth: e.expenseMonth }); setShowModal(true); };
+  const restoreMut = useMutation({
+    mutationFn:expensesApi.restoreMonth,
+    onSuccess:()=>{mk(null);toast.success('Aylıq xərc bərpa edildi');},
+    onError:(e:any)=>toast.error(e.response?.data?.message||'Bərpa edilmədi')
+  });
+
+  const openNew = () => { setEditing(null); setForm({ type: ExpenseType.YER, amount: 0, recurring: false, description: '', adChannel: '', expenseYear: year, expenseMonth: month }); setShowModal(true); };
+  const openEdit = (e: Expense) => { setEditing(e); setForm({ type: e.type, amount: e.amount, recurring: e.recurring, description: e.description || '', adChannel: e.adChannel || '', expenseYear: e.expenseYear, expenseMonth: e.expenseMonth }); setShowModal(true); };
   const closeModal = () => { setShowModal(false); setEditing(null); };
   const onSubmit = (ev: React.FormEvent) => { ev.preventDefault(); editing?.id ? updateMut.mutate({ id: editing.id, data: form }) : createMut.mutate(form); };
-  const total = list.reduce((s, e) => s + e.amount, 0);
+  const total = list.filter(e=>!e.cancelled).reduce((s, e) => s + e.amount, 0);
   const input = `w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${t.inputBgModal}`;
 
   return (
@@ -135,13 +141,14 @@ export function Expenses() {
               ) : list.map((e, i) => (
                 <motion.tr key={e.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className={`border-b ${t.rowBorder} ${t.rowHover}`}>
                   <td className={`py-3 px-4 font-medium ${t.tdClass}`}>{typeLabels[e.type]}</td>
-                  <td className="py-3 px-4 text-red-400 font-medium">{e.amount.toLocaleString()} AZN</td>
+                  <td className="py-3 px-4 text-red-400 font-medium">{e.cancelled?'Ləğv edilib':e.amount.toLocaleString()+' AZN'}</td>
                   <td className={`py-3 px-4 ${t.tdMuted}`}>{e.description || '—'}</td>
                   <td className="py-3 px-4">{e.recurring ? <Repeat size={14} className="text-indigo-400" /> : null}</td>
                   <td className="py-3 px-4 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => openEdit(e)} className={`p-1.5 rounded-lg ${t.iconBtn}`}><Edit2 size={15} /></button>
-                      <button onClick={() => { if (confirm('Silmək istəyirsiniz?')) deleteMut.mutate(e.id); }} className={`p-1.5 rounded-lg ${t.iconBtnDanger}`}><Trash2 size={15} /></button>
+                      {!e.cancelled&&<button onClick={() => openEdit(e)} className={`p-1.5 rounded-lg ${t.iconBtn}`}><Edit2 size={15} /></button>}
+                      {e.cancelled ? <button onClick={()=>restoreMut.mutate(e.id)} className="text-sm text-emerald-500">Bərpa et</button> :
+                        <button onClick={() => { if (confirm(e.recurringRuleId?'Yalnız bu ayın xərcini ləğv etmək istəyirsiniz?':'Bu xərci silmək istəyirsiniz?')) deleteMut.mutate(e.id); }} className={`p-1.5 rounded-lg ${t.iconBtnDanger}`}><Trash2 size={15} /></button>}
                     </div>
                   </td>
                 </motion.tr>
@@ -172,13 +179,21 @@ export function Expenses() {
                     <label className={`block text-sm mb-1 ${t.label}`}>Məbləğ (AZN)</label>
                     <input type="number" value={form.amount || ''} onChange={e => setForm({ ...form, amount: +e.target.value })} className={input} min={0} step={0.01} required />
                   </div>
+                  {form.type === ExpenseType.REKLAM && <div>
+                    <label className={`block text-sm mb-1 ${t.label}`}>Reklam kanalı</label>
+                    <select className={input} value={form.adChannel||''} onChange={e=>setForm({...form,adChannel:e.target.value})} required>
+                      <option value="">Seçin</option><option value="INSTAGRAM">Instagram</option><option value="WHATSAPP">WhatsApp</option>
+                      <option value="TIKTOK">TikTok</option><option value="SAYT">Sayt</option><option value="ZENG">Zəng</option>
+                      <option value="TOVSIYE">Tövsiyə</option><option value="BIRBASA_GELIS">Birbaşa gəliş</option>
+                    </select>
+                  </div>}
                   <div>
                     <label className={`block text-sm mb-1 ${t.label}`}>Təsvir</label>
                     <input type="text" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className={input} />
                   </div>
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={form.recurring} onChange={e => setForm({ ...form, recurring: e.target.checked })} className="w-4 h-4 rounded" />
-                    <span className={`text-sm ${t.muted}`}>Daimi xərc (hər ay avtomatik)</span>
+                    <input type="checkbox" checked={form.recurring} disabled={!!editing?.recurringRuleId} onChange={e => setForm({ ...form, recurring: e.target.checked })} className="w-4 h-4 rounded" />
+                    <span className={`text-sm ${t.muted}`}>{editing?.recurringRuleId?'Daimi xərcin yalnız bu ayı redaktə edilir':'Daimi xərc (hər ay avtomatik)'}</span>
                   </label>
                   <div className="flex gap-3 pt-2">
                     <button type="button" onClick={closeModal} className={`flex-1 py-2 rounded-lg ${t.cancelBtn}`}>Ləğv</button>

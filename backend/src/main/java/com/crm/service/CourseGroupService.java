@@ -8,12 +8,16 @@ import com.crm.enums.GroupStatus;
 import com.crm.enums.PaymentStatus;
 import com.crm.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
+import com.crm.enums.TeacherStatus;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,19 +31,29 @@ public class CourseGroupService {
     private final StudentRepository studentRepository;
     private final TeacherRepository teacherRepository;
     private final PaymentRepository paymentRepository;
+    private final PaymentService paymentService;
+    private final CourseRepository courseRepository;
+    private final StudentFreezePeriodRepository freezePeriods;
+    private final ChangeAuditService audit;
+    private final TeacherShareAllocationRepository shareAllocations;
+    @Value("${app.billing.first-payment-delay-months:0}")
+    private int firstPaymentDelayMonths;
 
+    @Transactional(readOnly = true)
     public List<CourseGroupDto> getAll() {
         return groupRepository.findAll().stream()
             .map(this::toDto)
             .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<CourseGroupDto> getActive() {
-        return groupRepository.findByStatus(GroupStatus.AKTIV).stream()
+        return groupRepository.findByStatusIn(List.of(GroupStatus.AKTIV,GroupStatus.BASLAYIB)).stream()
             .map(this::toDto)
             .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public CourseGroupDto getById(Long id) {
         CourseGroup group = groupRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Qrup tapılmadı"));
@@ -48,15 +62,23 @@ public class CourseGroupService {
 
     @Transactional
     public CourseGroupDto create(CourseGroupDto dto) {
+        GroupStatus initial = dto.getStatus()==null?GroupStatus.TOPLANIR:dto.getStatus();
+        if(initial!=GroupStatus.TOPLANIR && initial!=GroupStatus.BASLAYIB)
+            throw new IllegalArgumentException("Yeni qrup yalnız Toplanır və ya Başlayıb ola bilər");
+        if (dto.getCourseId()==null || dto.getCourseId()<=0)
+            throw new IllegalArgumentException("Kurs seçilməlidir");
         CourseGroup group = CourseGroup.builder()
             .groupNumber(dto.getGroupNumber())
             .startDate(dto.getStartDate())
             .durationMonths(dto.getDurationMonths())
-            .status(GroupStatus.AKTIV)
+            .status(dto.getStatus() == null ? GroupStatus.TOPLANIR : dto.getStatus())
             .build();
 
+        applyGroupMetadata(group,dto);
         group.calculateEndDate();
-        return toDto(groupRepository.save(group));
+        CourseGroupDto created=toDto(groupRepository.save(group));
+        audit.record("CREATE","COURSE_GROUP",created.getId(),null,created);
+        return created;
     }
 
     @Transactional
@@ -64,31 +86,42 @@ public class CourseGroupService {
         CourseGroup group = groupRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Qrup tapılmadı"));
 
+        CourseGroupDto before=toDto(group);
+        if(dto.getStatus()!=null) validateTransition(group.getStatus(),dto.getStatus());
         group.setGroupNumber(dto.getGroupNumber());
         group.setStartDate(dto.getStartDate());
         group.setDurationMonths(dto.getDurationMonths());
         if (dto.getStatus() != null) {
             group.setStatus(dto.getStatus());
         }
+        applyGroupMetadata(group,dto);
         group.calculateEndDate();
 
-        return toDto(groupRepository.save(group));
+        CourseGroupDto changed=toDto(groupRepository.save(group));
+        audit.record("UPDATE","COURSE_GROUP",id,before,changed);
+        return changed;
     }
 
     @Transactional
     public void complete(Long id) {
         CourseGroup group = groupRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Qrup tapılmadı"));
+        CourseGroupDto before=toDto(group);
+        validateTransition(group.getStatus(),GroupStatus.TAMAMLANMIS);
         group.setStatus(GroupStatus.TAMAMLANMIS);
         groupRepository.save(group);
+        audit.record("COMPLETE","COURSE_GROUP",id,before,toDto(group));
     }
 
     @Transactional
     public void suspend(Long id) {
         CourseGroup group = groupRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Qrup tapılmadı"));
+        CourseGroupDto before=toDto(group);
+        validateTransition(group.getStatus(),GroupStatus.DAYANDIRILMIS);
         group.setStatus(GroupStatus.DAYANDIRILMIS);
         groupRepository.save(group);
+        audit.record("SUSPEND","COURSE_GROUP",id,before,toDto(group));
     }
 
     @Transactional
@@ -98,8 +131,11 @@ public class CourseGroupService {
         if (group.getStatus() != GroupStatus.DAYANDIRILMIS) {
             throw new RuntimeException("Yalnız dayandırılmış qrupları bərpa etmək olar");
         }
-        group.setStatus(GroupStatus.AKTIV);
+        CourseGroupDto before=toDto(group);
+        validateTransition(group.getStatus(),GroupStatus.BASLAYIB);
+        group.setStatus(GroupStatus.BASLAYIB);
         groupRepository.save(group);
+        audit.record("RESUME","COURSE_GROUP",id,before,toDto(group));
     }
 
     // === Group Students ===
@@ -112,10 +148,15 @@ public class CourseGroupService {
 
     @Transactional
     public GroupStudentDto addStudentToGroup(Long groupId, GroupStudentDto dto) {
-        CourseGroup group = groupRepository.findById(groupId)
+        CourseGroup group = groupRepository.lockById(groupId)
             .orElseThrow(() -> new RuntimeException("Qrup tapılmadı"));
+        if (group.getStatus()==GroupStatus.DAYANDIRILMIS || group.getStatus()==GroupStatus.TAMAMLANMIS)
+            throw new IllegalArgumentException("Dayandırılmış və tamamlanmış qrupa tələbə əlavə edilmir");
         Student student = studentRepository.findById(dto.getStudentId())
             .orElseThrow(() -> new RuntimeException("Tələbə tapılmadı"));
+
+        if (group.getMaxStudents()!=null && groupStudentRepository.findByGroupId(groupId).size()>=group.getMaxStudents())
+            throw new IllegalArgumentException("Qrupun maksimum tələbə sayı dolub");
 
         if (groupStudentRepository.findByGroupIdAndStudentId(groupId, dto.getStudentId()).isPresent()) {
             throw new RuntimeException("Bu tələbə artıq bu qrupdadır");
@@ -129,8 +170,10 @@ public class CourseGroupService {
             .note(dto.getNote())
             .build();
 
+        if (student.isArchived() || student.getStatus()!=com.crm.enums.StudentStatus.AKTIV)
+            throw new IllegalArgumentException("Yalnız aktiv tələbə qrupa əlavə edilə bilər");
         // Create payment schedule for all months
-        createPaymentSchedule(student, group, dto.getMonthlyAmount());
+        createPaymentSchedule(student, group, dto.getMonthlyAmount(), dto.getJoinDate());
 
         // Only set primary group if student doesn't have one yet
         if (student.getGroup() == null) {
@@ -138,7 +181,9 @@ public class CourseGroupService {
             studentRepository.save(student);
         }
 
-        return toGroupStudentDto(groupStudentRepository.save(gs));
+        GroupStudentDto created=toGroupStudentDto(groupStudentRepository.save(gs));
+        audit.record("ENROLL","GROUP_STUDENT",created.getId(),null,created);
+        return created;
     }
 
     @Transactional
@@ -146,6 +191,9 @@ public class CourseGroupService {
         GroupStudent gs = groupStudentRepository.findByGroupIdAndStudentId(groupId, studentId)
             .orElseThrow(() -> new RuntimeException("Tələbə bu qrupda deyil"));
 
+        if (!paymentRepository.findByStudentIdAndGroupId(studentId,groupId).isEmpty())
+            throw new IllegalArgumentException("Ödəniş tarixi olan qeydiyyatı silmək olmaz; tələbəni Ayrılıb edin");
+        GroupStudentDto before = toGroupStudentDto(gs);
         Student student = studentRepository.findById(studentId).orElse(null);
         if (student != null && student.getGroup() != null && student.getGroup().getId().equals(groupId)) {
             // Student's primary group was removed — find another group or set null
@@ -160,6 +208,7 @@ public class CourseGroupService {
         }
 
         groupStudentRepository.delete(gs);
+        audit.record("REMOVE","GROUP_STUDENT",gs.getId(),before,null);
     }
 
     // === Group Teachers ===
@@ -176,62 +225,111 @@ public class CourseGroupService {
             .orElseThrow(() -> new RuntimeException("Qrup tapılmadı"));
         Teacher teacher = teacherRepository.findById(dto.getTeacherId())
             .orElseThrow(() -> new RuntimeException("Müəllim tapılmadı"));
+        if(teacher.getStatus()!=TeacherStatus.AKTIV)
+            throw new IllegalArgumentException("Arxiv müəllim qrupa təyin edilə bilməz");
+        if(dto.getSalaryPercentage()==null || dto.getSalaryPercentage().signum()<=0 ||
+           dto.getSalaryPercentage().compareTo(BigDecimal.valueOf(100))>0)
+            throw new IllegalArgumentException("Müəllim payı 0–100% arasında olmalıdır");
+        List<GroupTeacher> existing=groupTeacherRepository.findByGroupId(groupId);
+        if(existing.stream().anyMatch(x->x.getTeacher().getId().equals(dto.getTeacherId())))
+            throw new IllegalArgumentException("Müəllim artıq bu qrupa təyin olunub");
+        BigDecimal total=existing.stream().map(GroupTeacher::getSalaryPercentage)
+            .reduce(BigDecimal.ZERO,BigDecimal::add).add(dto.getSalaryPercentage());
+        if(total.compareTo(BigDecimal.valueOf(100))>0)
+            throw new IllegalArgumentException("Qrup müəllim paylarının cəmi 100%-i keçə bilməz");
 
         GroupTeacher gt = GroupTeacher.builder()
             .group(group)
             .teacher(teacher)
             .salaryPercentage(dto.getSalaryPercentage())
-            .effectiveMonth(dto.getEffectiveMonth())
-            .effectiveYear(dto.getEffectiveYear())
+            .effectiveMonth(dto.getEffectiveMonth()==null?LocalDate.now().getMonthValue():dto.getEffectiveMonth())
+            .effectiveYear(dto.getEffectiveYear()==null?LocalDate.now().getYear():dto.getEffectiveYear())
             .build();
 
-        return toGroupTeacherDto(groupTeacherRepository.save(gt));
+        GroupTeacherDto created=toGroupTeacherDto(groupTeacherRepository.save(gt));
+        audit.record("ASSIGN","GROUP_TEACHER",created.getId(),null,created);
+        return created;
     }
 
     @Transactional
     public void removeTeacher(Long groupId, Long teacherId) {
         List<GroupTeacher> gts = groupTeacherRepository.findByGroupId(groupId);
-        gts.stream()
+        GroupTeacher selected=gts.stream()
             .filter(gt -> gt.getTeacher().getId().equals(teacherId))
-            .findFirst()
-            .ifPresent(groupTeacherRepository::delete);
+            .findFirst().orElseThrow(()->new IllegalArgumentException("Müəllim qrupa təyin olunmayıb"));
+        if(shareAllocations.existsByGroupTeacherId(selected.getId()))
+            throw new IllegalArgumentException("Müəllimə pay hesablanıb; bu təyinat silinmir");
+        GroupTeacherDto before=toGroupTeacherDto(selected);
+        groupTeacherRepository.delete(selected);
+        audit.record("REMOVE","GROUP_TEACHER",selected.getId(),before,null);
     }
 
     // === Payment Schedule ===
 
-    private void createPaymentSchedule(Student student, CourseGroup group, BigDecimal monthlyAmount) {
-        LocalDate current = group.getStartDate();
-        LocalDate end = group.getEndDate();
-
-        while (!current.isAfter(end)) {
+    private void createPaymentSchedule(Student student, CourseGroup group, BigDecimal monthlyAmount, LocalDate joinDate) {
+        if (monthlyAmount==null || monthlyAmount.signum()<=0 || monthlyAmount.scale()>2)
+            throw new IllegalArgumentException("Aylıq ödəniş düzgün deyil");
+        LocalDate joined=joinDate==null?group.getStartDate():joinDate;
+        if(joined.isAfter(group.getEndDate()))
+            throw new IllegalArgumentException("Qrup müddəti bitdikdən sonra qeydiyyat olmaz");
+        LocalDate first=joined.isAfter(group.getStartDate())?joined:group.getStartDate();
+        int elapsed=(int)ChronoUnit.MONTHS.between(
+            YearMonth.from(group.getStartDate()),YearMonth.from(first));
+        int months=Math.max(0,group.getDurationMonths()-Math.max(0,elapsed));
+        if(months==0) throw new IllegalArgumentException("Qrup müddəti başa çatıb");
+        if(firstPaymentDelayMonths!=0 && firstPaymentDelayMonths!=1)
+            throw new IllegalStateException("First payment delay must be 0 or 1 month");
+        first=first.plusMonths(firstPaymentDelayMonths);
+        for (int i=0; i<months; i++) {
+            LocalDate due = first.plusMonths(i);
+            boolean frozen=freezePeriods.existsByStudentIdAndYearAndMonth(student.getId(),due.getYear(),due.getMonthValue());
             Payment payment = Payment.builder()
-                .student(student)
-                .group(group)
-                .paymentYear(current.getYear())
-                .paymentMonth(current.getMonthValue())
-                .amount(monthlyAmount)
-                .status(PaymentStatus.GOZLENILIR)
-                .build();
+                .student(student).group(group)
+                .paymentYear(due.getYear()).paymentMonth(due.getMonthValue())
+                .amount(monthlyAmount).dueDate(due)
+                .discountAmount(BigDecimal.ZERO).frozen(frozen)
+                .status(frozen?PaymentStatus.DONDURULUB:PaymentStatus.GOZLENILIR).build();
             paymentRepository.save(payment);
-            current = current.plusMonths(1);
         }
     }
 
     // === Group Summary Calculations ===
 
     public BigDecimal calculateGroupCollected(Long groupId, Integer year, Integer month) {
-        return paymentRepository.sumCollectedForGroupAndMonth(groupId, year, month);
+        return paymentService.getCollectedForGroupMonth(groupId, year, month);
     }
 
     public BigDecimal calculateTeacherSalary(Long groupId, Integer year, Integer month) {
-        List<GroupTeacher> teachers = groupTeacherRepository.findByGroupId(groupId);
-        BigDecimal collected = paymentRepository.sumCollectedForGroupAndMonth(groupId, year, month);
+        java.time.YearMonth period=java.time.YearMonth.of(year,month);
+        return shareAllocations.sumForGroup(groupId,
+            period.atDay(1).atStartOfDay(),period.plusMonths(1).atDay(1).atStartOfDay());
+    }
 
-        return teachers.stream()
-            .filter(gt -> gt.getEffectiveYear() <= year &&
-                         (gt.getEffectiveYear() < year || gt.getEffectiveMonth() <= month))
-            .map(gt -> collected.multiply(gt.getSalaryPercentage()).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP))
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    private void validateTransition(GroupStatus oldStatus,GroupStatus newStatus) {
+        if(oldStatus==newStatus) return;
+        boolean allowed=switch(oldStatus) {
+            case TOPLANIR -> newStatus==GroupStatus.BASLAYIB||newStatus==GroupStatus.DAYANDIRILMIS;
+            case AKTIV, BASLAYIB -> newStatus==GroupStatus.DAYANDIRILMIS||newStatus==GroupStatus.TAMAMLANMIS;
+            case DAYANDIRILMIS -> newStatus==GroupStatus.BASLAYIB;
+            case TAMAMLANMIS -> false;
+        };
+        if(!allowed) throw new IllegalArgumentException("Qrup statusu bu mərhələyə keçə bilməz");
+    }
+
+    private void applyGroupMetadata(CourseGroup group, CourseGroupDto dto) {
+        if (dto.getCourseId() != null && dto.getCourseId() > 0) {
+            Course course = courseRepository.findById(dto.getCourseId())
+                .orElseThrow(() -> new IllegalArgumentException("Kurs tapılmadı"));
+            group.setCourse(course);
+        }
+        group.setLessonDays(dto.getLessonDays());
+        group.setLessonTime(dto.getLessonTime());
+        group.setTrainingMode(dto.getTrainingMode());
+        group.setRoom(dto.getRoom());
+        group.setMaxStudents(dto.getMaxStudents());
+        if(group.getMaxStudents()!=null &&
+           group.getMaxStudents()<groupStudentRepository.findByGroupId(group.getId()==null?-1L:group.getId()).size())
+            throw new IllegalArgumentException("Maksimum tələbə sayı mövcud iştirakçılardan az ola bilməz");
     }
 
     private CourseGroupDto toDto(CourseGroup g) {
@@ -242,6 +340,13 @@ public class CourseGroupService {
         dto.setDurationMonths(g.getDurationMonths());
         dto.setEndDate(g.getEndDate());
         dto.setStatus(g.getStatus());
+        dto.setCourseId(g.getCourse()==null?null:g.getCourse().getId());
+        dto.setCourseName(g.getCourse()==null?null:g.getCourse().getName());
+        dto.setLessonDays(g.getLessonDays());
+        dto.setLessonTime(g.getLessonTime());
+        dto.setTrainingMode(g.getTrainingMode());
+        dto.setRoom(g.getRoom());
+        dto.setMaxStudents(g.getMaxStudents());
         return dto;
     }
 
@@ -263,7 +368,9 @@ public class CourseGroupService {
         dto.setId(gt.getId());
         dto.setTeacherId(gt.getTeacher().getId());
         dto.setSalaryPercentage(gt.getSalaryPercentage());
-        dto.setCalculatedSalary(gt.getCalculatedSalary());
+        java.time.YearMonth current=java.time.YearMonth.now(java.time.ZoneId.of("Asia/Baku"));
+        dto.setCalculatedSalary(shareAllocations.sumForAssignment(gt.getId(),
+            current.atDay(1).atStartOfDay(),current.plusMonths(1).atDay(1).atStartOfDay()));
         dto.setSalaryStatus(gt.getSalaryStatus());
         dto.setEffectiveMonth(gt.getEffectiveMonth());
         dto.setEffectiveYear(gt.getEffectiveYear());
@@ -274,6 +381,13 @@ public class CourseGroupService {
 
     @Transactional
     public void delete(Long id) {
-        groupRepository.deleteById(id);
+        CourseGroup group=groupRepository.findById(id)
+            .orElseThrow(()->new IllegalArgumentException("Qrup tapılmadı"));
+        if(!paymentRepository.findByGroupId(id).isEmpty() ||
+           !groupStudentRepository.findByGroupId(id).isEmpty())
+            throw new IllegalArgumentException("Maliyyə və tələbə tarixçəsi olan qrup silinmir");
+        CourseGroupDto before=toDto(group);
+        groupRepository.delete(group);
+        audit.record("DELETE","COURSE_GROUP",id,before,null);
     }
 }

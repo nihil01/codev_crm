@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { studentsApi } from '../api/students';
+import { groupsApi } from '../api/groups';
 import { certificatesApi } from '../api/certificates';
 import { useThemeClasses } from '../lib/theme';
 import { Award, Download, FileText } from 'lucide-react';
@@ -10,6 +11,7 @@ import toast from 'react-hot-toast';
 export const Certificates: React.FC = () => {
   const t = useThemeClasses();
   const [selectedStudentId, setSelectedStudentId] = useState(0);
+  const [selectedGroupId,setSelectedGroupId] = useState(0);
   const [certName, setCertName] = useState('');
   const [issueDate, setIssueDate] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,12 +21,14 @@ export const Certificates: React.FC = () => {
     queryFn: studentsApi.getActive,
   });
 
+  const {data:groups=[]} = useQuery({queryKey:['groups'],queryFn:groupsApi.getAll});
+  const completed=groups.filter(g=>g.status==='TAMAMLANMIS');
   const selectedStudent = students.find((s) => s.id === selectedStudentId);
 
   const today = new Date().toISOString().split('T')[0];
 
   const handleGenerate = async () => {
-    if (!selectedStudent || !certName.trim() || !issueDate) {
+    if (!selectedStudent || !selectedGroupId || !issueDate) {
       toast.error('Bütün sahələri doldurun');
       return;
     }
@@ -39,6 +43,7 @@ export const Certificates: React.FC = () => {
     try {
       const blob = await certificatesApi.generate({
         studentId: selectedStudent.id,
+        groupId: selectedGroupId,
         certName: certName.trim(),
         issueDate,
       });
@@ -123,6 +128,15 @@ export const Certificates: React.FC = () => {
               </div>
             </motion.div>
           )}
+
+          <div>
+            <label className={`block text-sm font-medium mb-1.5 ${t.label}`}>Tamamlanmış qrup</label>
+            <select className={inputCls} value={selectedGroupId} onChange={e=>setSelectedGroupId(+e.target.value)} required>
+              <option value={0}>Qrup seçin...</option>
+              {completed.map(g=><option key={g.id} value={g.id}>{g.groupNumber} {g.courseName?'— '+g.courseName:''}</option>)}
+            </select>
+            <p className={`mt-1 text-xs ${t.muted}`}>Sertifikat üçün qrup tamamlanmalı və tələbənin həmin qrupda borcu olmamalıdır.</p>
+          </div>
 
           {/* Certificate name */}
           <div>

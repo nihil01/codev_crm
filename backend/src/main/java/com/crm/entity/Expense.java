@@ -36,6 +36,14 @@ public class Expense {
     private Boolean recurring; // Daimi xərc
 
     private String description;
+    private String adChannel;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recurring_rule_id")
+    private RecurringExpenseRule recurringRule;
+
+    @Column(nullable = false)
+    private boolean cancelled = false;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

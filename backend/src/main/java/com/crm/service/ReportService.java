@@ -55,13 +55,13 @@ public class ReportService {
         BigDecimal teacherSalaries = calculateTeacherSalaries(year, month);
         report.setTotalTeacherSalaries(teacherSalaries);
 
-        BigDecimal utilityExpenses = expenseService.getTotalExpenses(year, month);
+        BigDecimal utilityExpenses = expenseService.getTotalOneTime(year, month);
         report.setTotalUtilityExpenses(utilityExpenses);
 
-        BigDecimal fixedExpenses = calculateFixedExpensesForMonth(year, month);
+        BigDecimal fixedExpenses = expenseService.getTotalRecurring(year, month);
         report.setTotalFixedExpenses(fixedExpenses);
 
-        BigDecimal totalExpenses = teacherSalaries.add(fixedExpenses).add(utilityExpenses);
+        BigDecimal totalExpenses = teacherSalaries.add(utilityExpenses).add(fixedExpenses);
         report.setTotalExpenses(totalExpenses);
 
         report.setNetProfit(collected.subtract(totalExpenses));
@@ -73,20 +73,21 @@ public class ReportService {
     }
 
     private BigDecimal calculateExpected(Integer year, Integer month) {
-        List<CourseGroup> activeGroups = groupRepository.findByStatus(GroupStatus.AKTIV);
+        List<CourseGroup> activeGroups = groupRepository.findByStatusIn(List.of(GroupStatus.AKTIV,GroupStatus.BASLAYIB));
         BigDecimal total = BigDecimal.ZERO;
 
         for (CourseGroup group : activeGroups) {
             List<PaymentDto> groupPayments = paymentService.getByGroupAndPeriod(group.getId(), year, month);
             total = total.add(groupPayments.stream()
-                .map(PaymentDto::getAmount)
+                .filter(p->!p.isFrozen())
+                .map(p->p.getAmount().subtract(p.getDiscountAmount()==null?BigDecimal.ZERO:p.getDiscountAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
         }
         return total;
     }
 
     private BigDecimal calculateTeacherSalaries(Integer year, Integer month) {
-        List<CourseGroup> activeGroups = groupRepository.findByStatus(GroupStatus.AKTIV);
+        List<CourseGroup> activeGroups = groupRepository.findByStatusIn(List.of(GroupStatus.AKTIV,GroupStatus.BASLAYIB));
         BigDecimal total = BigDecimal.ZERO;
 
         for (CourseGroup group : activeGroups) {
@@ -96,9 +97,7 @@ public class ReportService {
     }
 
     private BigDecimal calculateFixedExpensesForMonth(Integer year, Integer month) {
-        return expenseService.getRecurring().stream()
-            .map(e -> e.getAmount())
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return expenseService.getTotalRecurring(year,month);
     }
 
     private List<ReportDto.MonthlyComparison> getMonthlyComparison(Integer currentYear, Integer currentMonth) {
@@ -118,8 +117,7 @@ public class ReportService {
             mc.setMonth(month);
             mc.setIncome(paymentService.getCollectedForMonth(year, month));
             mc.setExpenses(expenseService.getTotalExpenses(year, month)
-                .add(calculateTeacherSalaries(year, month))
-                .add(calculateFixedExpensesForMonth(year, month)));
+                .add(calculateTeacherSalaries(year, month)));
             mc.setProfit(mc.getIncome().subtract(mc.getExpenses()));
 
             comparisons.add(mc);

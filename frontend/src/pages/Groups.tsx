@@ -8,24 +8,35 @@ import { CourseGroup } from '../types';
 import { useThemeClasses } from '../lib/theme';
 import { Plus, Edit2, Trash2, Users, GraduationCap, X, CheckCircle, PauseCircle, PlayCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '../api/client';
 
 const statusColors: Record<string, string> = {
   AKTIV: 'bg-emerald-500/10 text-emerald-400',
+  BASLAYIB: 'bg-emerald-500/10 text-emerald-400',
+  TOPLANIR: 'bg-sky-500/10 text-sky-400',
   TAMAMLANMIS: 'bg-blue-500/10 text-blue-400',
   DAYANDIRILMIS: 'bg-yellow-500/10 text-yellow-400',
 };
-const statusLabels: Record<string, string> = { AKTIV: 'Aktiv', TAMAMLANMIS: 'Tamamlanmış', DAYANDIRILMIS: 'Dayandırılmış' };
+const statusLabels: Record<string, string> = { AKTIV: 'Başlayıb', BASLAYIB: 'Başlayıb', TOPLANIR: 'Toplanır', TAMAMLANMIS: 'Tamamlanmış', DAYANDIRILMIS: 'Dayandırılmış' };
 
 export const Groups: React.FC = () => {
   const t = useThemeClasses();
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<CourseGroup | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<number | null>(null);
-  const [form, setForm] = useState({ groupNumber: '', startDate: '', durationMonths: 6 });
+  const emptyForm = { groupNumber: '', startDate: '', durationMonths: 6, courseId: 0, lessonDays: '', lessonTime: '', trainingMode: 'EYANI' as 'EYANI'|'ONLAYN', room:'', maxStudents: 20, status: 'TOPLANIR' as CourseGroup['status'] };
+  const [form, setForm] = useState(emptyForm);
   const [teacherForm, setTeacherForm] = useState({ teacherId: 0, salaryPercentage: 30, effectiveMonth: new Date().getMonth() + 1, effectiveYear: new Date().getFullYear() });
   const queryClient = useQueryClient();
 
   const { data: groups = [], isLoading } = useQuery({ queryKey: ['groups'], queryFn: groupsApi.getAll });
+  const {data:courses=[]} = useQuery<{id:number;name:string}[]>({queryKey:['courses'],queryFn:async()=>(await api.get('/courses')).data});
+  const [newCourse,setNewCourse] = useState('');
+  const courseMutation = useMutation({
+    mutationFn:async(name:string)=> (await api.post('/courses',{name})).data,
+    onSuccess:()=>{queryClient.invalidateQueries({queryKey:['courses']});setNewCourse('');toast.success('Kurs əlavə edildi');},
+    onError:()=>toast.error('Kurs əlavə olunmadı')
+  });
   const { data: students = [] } = useQuery({ queryKey: ['students-active'], queryFn: studentsApi.getActive });
   const { data: teachers = [] } = useQuery({ queryKey: ['teachers-active'], queryFn: teachersApi.getActive });
   const { data: groupStudents = [] } = useQuery({ queryKey: ['group-students', selectedGroup], queryFn: () => groupsApi.getStudents(selectedGroup!), enabled: !!selectedGroup });
@@ -77,11 +88,12 @@ export const Groups: React.FC = () => {
     addStudentMutation.mutate({ groupId: selectedGroup, data: addStudentForm });
   };
 
-  const openCreate = () => { setEditing(null); setForm({ groupNumber: '', startDate: '', durationMonths: 6 }); setShowModal(true); };
-  const openEdit = (g: CourseGroup) => { setEditing(g); setForm({ groupNumber: g.groupNumber, startDate: g.startDate, durationMonths: g.durationMonths }); setShowModal(true); };
+  const openCreate = () => { setEditing(null); setForm({...emptyForm}); setShowModal(true); };
+  const openEdit = (g: CourseGroup) => { setEditing(g); setForm({groupNumber:g.groupNumber,startDate:g.startDate,durationMonths:g.durationMonths,courseId:g.courseId||0,lessonDays:g.lessonDays||'',lessonTime:g.lessonTime||'',trainingMode:g.trainingMode||'EYANI',room:g.room||'',maxStudents:g.maxStudents||20,status:g.status}); setShowModal(true); };
   const closeModal = () => { setShowModal(false); setEditing(null); };
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.courseId) {toast.error('Kurs seçilməlidir');return;}
     editing?.id ? updateMutation.mutate({ id: editing.id, data: form }) : createMutation.mutate(form);
   };
 
@@ -109,11 +121,13 @@ export const Groups: React.FC = () => {
               <div className={`text-sm space-y-1 transition-colors duration-300 ${t.muted}`}>
                 <p>Başlama: {new Date(group.startDate).toLocaleDateString('az-AZ')}</p>
                 <p>Müddət: {group.durationMonths} ay</p>
+                <p>Kurs: {group.courseName || 'Təyin edilməyib'}</p>
+                <p>{group.lessonDays || '—'} {group.lessonTime || ''} · {group.trainingMode === 'ONLAYN' ? 'Onlayn' : 'Əyani'}</p>
                 {group.endDate && <p>Bitmə: {new Date(group.endDate).toLocaleDateString('az-AZ')}</p>}
               </div>
               <div className="flex gap-2 mt-3">
                 <button onClick={(e) => { e.stopPropagation(); openEdit(group); }} className={`p-1 rounded transition-colors ${t.iconBtn}`} title="Redaktə"><Edit2 size={14} /></button>
-                {group.status === 'AKTIV' && (
+                {(group.status === 'AKTIV' || group.status === 'BASLAYIB') && (
                   <>
                     <button onClick={(e) => { e.stopPropagation(); completeMutation.mutate(group.id); }} className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1"><CheckCircle size={14} /> Tamamla</button>
                     <button onClick={(e) => { e.stopPropagation(); suspendMutation.mutate(group.id); }} className="text-xs text-yellow-400 hover:text-yellow-300 flex items-center gap-1"><PauseCircle size={14} /> Dayandır</button>
@@ -205,6 +219,14 @@ export const Groups: React.FC = () => {
                   <div><label className={`block text-sm mb-1 ${t.label}`}>Qrup Nömrəsi</label><input type="text" value={form.groupNumber} onChange={(e) => setForm({ ...form, groupNumber: e.target.value })} placeholder="G-2024-01" className={inputCls} required /></div>
                   <div><label className={`block text-sm mb-1 ${t.label}`}>Başlama Tarixi</label><input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} className={inputCls} required /></div>
                   <div><label className={`block text-sm mb-1 ${t.label}`}>Davam Müddəti (ay)</label><input type="number" value={form.durationMonths} onChange={(e) => setForm({ ...form, durationMonths: +e.target.value })} min={1} className={inputCls} required /></div>
+                  <div><label className={`block text-sm mb-1 ${t.label}`}>Kurs</label><select className={inputCls} value={form.courseId} onChange={e=>setForm({...form,courseId:+e.target.value})}><option value={0}>Kurs seçin</option>{courses.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+                  <div className="flex gap-2"><input className={inputCls} placeholder="Yeni kurs adı" value={newCourse} onChange={e=>setNewCourse(e.target.value)}/><button type="button" className="px-3 rounded-lg border" disabled={!newCourse.trim()} onClick={()=>courseMutation.mutate(newCourse)}>Əlavə et</button></div>
+                  <div><label className={`block text-sm mb-1 ${t.label}`}>Dərs günləri</label><input className={inputCls} placeholder="B.e., Ç.a., C." value={form.lessonDays} onChange={e=>setForm({...form,lessonDays:e.target.value})}/></div>
+                  <div><label className={`block text-sm mb-1 ${t.label}`}>Dərs saatı</label><input type="time" className={inputCls} value={form.lessonTime} onChange={e=>setForm({...form,lessonTime:e.target.value})}/></div>
+                  <div><label className={`block text-sm mb-1 ${t.label}`}>Format</label><select className={inputCls} value={form.trainingMode} onChange={e=>setForm({...form,trainingMode:e.target.value as 'EYANI'|'ONLAYN'})}><option value="EYANI">Əyani</option><option value="ONLAYN">Onlayn</option></select></div>
+                  <div><label className={`block text-sm mb-1 ${t.label}`}>Otaq</label><input className={inputCls} value={form.room} onChange={e=>setForm({...form,room:e.target.value})}/></div>
+                  <div><label className={`block text-sm mb-1 ${t.label}`}>Maksimum say</label><input type="number" min={1} className={inputCls} value={form.maxStudents} onChange={e=>setForm({...form,maxStudents:+e.target.value})}/></div>
+                  <div><label className={`block text-sm mb-1 ${t.label}`}>Status</label><select className={inputCls} value={form.status} onChange={e=>setForm({...form,status:e.target.value as CourseGroup['status']})}><option value="TOPLANIR">Toplanır</option><option value="BASLAYIB">Başlayıb</option><option value="DAYANDIRILMIS">Dayandırılıb</option><option value="TAMAMLANMIS">Tamamlanıb</option></select></div>
                   <div className="flex gap-3 pt-2">
                     <button type="button" onClick={closeModal} className={`flex-1 py-2 rounded-lg transition-colors ${t.cancelBtn}`}>Ləğv Et</button>
                     <button type="submit" className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors">{editing ? 'Yenilə' : 'Yarat'}</button>

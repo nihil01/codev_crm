@@ -30,6 +30,21 @@ export const paymentsApi = {
     const { data } = await api.put(`/payments/${id}/pay?method=${method}`);
     return data;
   },
+  partial: async (id:number, amount:number, method:PaymentMethod):Promise<Payment> =>
+    (await api.post(`/payments/${id}/partial`,null,{params:{amount,method}})).data,
+  discount: async (id:number, amount:number, reason:string):Promise<Payment> =>
+    (await api.put(`/payments/${id}/discount`,null,{params:{amount,reason}})).data,
+  freeze: async (id:number,frozen:boolean):Promise<Payment> =>
+    (await api.put(`/payments/${id}/freeze`,null,{params:{frozen}})).data,
+  transactions: async(id:number):Promise<{id:number;amount:number;paidAt:string;method:string}[]> =>
+    (await api.get(`/payments/${id}/transactions`)).data,
+  downloadReceipt: async (id:number):Promise<void> => {
+    const res=await api.get(`/payments/transactions/${id}/receipt`,{responseType:'blob'});
+    const url=URL.createObjectURL(new Blob([res.data],{type:'application/pdf'}));
+    const anchor=document.createElement('a');
+    anchor.href=url;anchor.download=`odenis-qebzi-${id}.pdf`;anchor.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  },
   updateStatus: async (id: number, status: PaymentStatus): Promise<Payment> => {
     const { data } = await api.put(`/payments/${id}/status?status=${status}`);
     return data;

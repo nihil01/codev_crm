@@ -1,9 +1,12 @@
 export enum Role {
   ADMIN = 'ADMIN',
+  MANAGER = 'MANAGER',
 }
 
 export enum GroupStatus {
   AKTIV = 'AKTIV',
+  BASLAYIB = 'BASLAYIB',
+  TOPLANIR = 'TOPLANIR',
   TAMAMLANMIS = 'TAMAMLANMIS',
   DAYANDIRILMIS = 'DAYANDIRILMIS',
 }
@@ -13,6 +16,7 @@ export enum PaymentStatus {
   GOZLENILIR = 'GOZLENILIR',
   GECIKIB = 'GECIKIB',
   BAGISLANIB = 'BAGISLANIB',
+  DONDURULUB = 'DONDURULUB',
 }
 
 export enum PaymentMethod {
@@ -34,6 +38,9 @@ export enum ExpenseType {
   SU = 'SU',
   QAZ = 'QAZ',
   DIGER = 'DIGER',
+  REKLAM = 'REKLAM',
+  KOMMUNAL = 'KOMMUNAL',
+  AVADANLIQ = 'AVADANLIQ',
 }
 
 export interface User {
@@ -50,6 +57,26 @@ export interface AuthResponse {
   role: Role;
 }
 
+export type LeadSource = 'INSTAGRAM'|'WHATSAPP'|'TIKTOK'|'ZENG'|'TOVSIYE'|'SAYT'|'BIRBASA_GELIS';
+export type LeadStage = 'YENI'|'ELAQE_SAXLANILDI'|'SINAQ_KONSULTASIYA'|'DUSUNUR'|'QEYDIYYAT'|'ITIRILDI';
+export type StudentStatus = 'AKTIV'|'DONDURULUB'|'BITIRIB'|'AYRILIB';
+
+export interface Lead {
+  id: number;
+  fullName: string;
+  phone: string;
+  source: LeadSource;
+  stage: LeadStage;
+  assignedManagerId?: number | null;
+  convertedStudentId?: number | null;
+  assignedManagerName?: string;
+  consultationAt?: string;
+  lostReason?: string;
+  interestedCourse?: string;
+  note?: string;
+  createdAt?: string;
+}
+
 export interface Student {
   id: number;
   firstName: string;
@@ -58,6 +85,13 @@ export interface Student {
   email: string;
   phone?: string;
   birthDate?: string;
+  source?: LeadSource;
+  parentName?: string;
+  parentPhone?: string;
+  address?: string;
+  note?: string;
+  status?: StudentStatus;
+  exitReason?: string;
   groupId?: number;
   registrationDate: string;
   archived: boolean;
@@ -80,6 +114,13 @@ export interface CourseGroup {
   durationMonths: number;
   endDate: string;
   status: GroupStatus;
+  courseId?: number;
+  courseName?: string;
+  lessonDays?: string;
+  lessonTime?: string;
+  trainingMode?: 'EYANI'|'ONLAYN';
+  room?: string;
+  maxStudents?: number;
 }
 
 export interface GroupStudent {
@@ -113,7 +154,14 @@ export interface Payment {
   paymentMonth: number;
   amount: number;
   paymentDate?: string;
+  dueDate?: string;
   paymentMethod?: PaymentMethod;
+  paidAmount?: number;
+  remainingAmount?: number;
+  discountAmount?: number;
+  discountReason?: string;
+  frozen?: boolean;
+  studentPhone?: string;
   status: PaymentStatus;
   note?: string;
   studentFirstName: string;
@@ -129,6 +177,9 @@ export interface Expense {
   expenseMonth: number;
   recurring: boolean;
   description?: string;
+  adChannel?: string;
+  recurringRuleId?: number;
+  cancelled?: boolean;
 }
 
 export interface DashboardData {
