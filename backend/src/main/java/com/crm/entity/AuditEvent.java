@@ -20,6 +20,13 @@ public class AuditEvent {
     private String path;
     @Column(nullable = false)
     private Integer statusCode;
+    private String entityType;
+    private Long entityId;
+    private String action;
+    @Column(columnDefinition = "TEXT")
+    private String beforeJson;
+    @Column(columnDefinition = "TEXT")
+    private String afterJson;
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

@@ -31,6 +31,8 @@ public class AuditInterceptor implements HandlerInterceptor {
         event.setHttpMethod(method);
         event.setPath(path.length() > 512 ? path.substring(0, 512) : path);
         event.setStatusCode(response.getStatus());
+        event.setAction("HTTP_REQUEST");
+        event.setEntityType("HTTP");
         events.save(event);
     }
 }
